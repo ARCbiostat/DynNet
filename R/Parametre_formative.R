@@ -67,7 +67,11 @@ Parametre_formative <- function(K,
                        fixed.survival.models = NULL,
                        interactionY.survival.models = NULL,
                        nYsurv = 0,
-                       data_F = data_F) {
+                       names_x,
+                       names_x0,
+                       names_z,
+                       names_z0,
+                       names_y) {
   cl <- match.call()
   
   #   require(MASS)
@@ -98,19 +102,19 @@ Parametre_formative <- function(K,
     
     #alpha_mu0
     alpha_mu0 <- paras.ini$alpha_mu0
-    map_p$alpha_mu0 <- as.integer(sub("^LP0\\.(\\d+).*", "\\1", colnames(data_F$x0)))
+    map_p$alpha_mu0 <- as.integer(sub("^LP0\\.(\\d+).*", "\\1", names_x0))
     names(map_p$alpha_mu0) <- paste0("alpha_mu0", 1:length(alpha_mu0))
     
     #alpha_mu
     alpha_mu <- paras.ini$alpha_mu
-    map_p$alpha_mu <- as.integer(sub("^DeltaLP\\.(\\d+).*", "\\1", colnames(data_F$x)))
+    map_p$alpha_mu <- as.integer(sub("^DeltaLP\\.(\\d+).*", "\\1", names_x))
     names(map_p$alpha_mu) <- paste0("alpha_mu", 1:length(alpha_mu))
     
     #random effects
     alpha_D <- paras.ini$alpha_D
     
-    RE_z0 <- as.integer(sub("\\(.*\\)", "", colnames(data_F$z0)))
-    RE_z <- as.integer(sub("\\(.*\\)", "", colnames(data_F$z)))
+    RE_z0 <- as.integer(sub("\\(.*\\)", "", names_z0))
+    RE_z <- as.integer(sub("\\(.*\\)", "", names_z))
     map_p$alpha_D <- rep(c(RE_z0, RE_z), times = 1:nb_RE)
     names(map_p$alpha_D) <- paste0("alpha_D", 1:length(alpha_D))
     
@@ -147,7 +151,7 @@ Parametre_formative <- function(K,
     
     
     map_p$ParaTransformY <- rep(mapping.to.LP, times = as.numeric(table(sub(
-      "\\..*", "", colnames(data_F$Mod.MatrixY)
+      "\\..*", "", names_y
     ))))
     names(map_p$ParaTransformY) <- paste0("ParaTransformY", 1:length(ParaTransformY))
     

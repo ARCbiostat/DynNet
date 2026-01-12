@@ -144,7 +144,8 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
                         link = link, npara_k = npara_k, 
                         Survdata = Survdata, basehaz = basehaz, knots_surv = knots_surv, assoc = assoc, truncation = truncation,
                         data = data, outcomes = outcomes, df= data_F$df, nE = data_F$nE, np_surv = data_F$np_surv, 
-                        fixed.survival.models =fixed.survival.models, interactionY.survival.models = interactionY.survival.models, nYsurv = data_F$nYsurv,data_F=data_F)
+                        fixed.survival.models =fixed.survival.models, interactionY.survival.models = interactionY.survival.models, 
+                        nYsurv = data_F$nYsurv,names_x0=colnames(data_F$x0),names_x=colnames(data_F$x),names_z0=colnames(data_F$z0),names_z=colnames(data_F$z),names_y=colnames(data_F$Mod.MatrixY))
   return(paras)
     }else{
     paras <- Parametre(K=K, nD = nD, vec_ncol_x0n, n_col_x, nb_RE, indexparaFixeUser = indexparaFixeUser, 
