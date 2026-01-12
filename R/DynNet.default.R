@@ -13,6 +13,9 @@
 #' @param nD number of the latent processes
 #' @param mapping.to.LP indicates which outcome measured which latent process, it is a mapping table between
 #'  outcomes and latents processes
+#'  @param nL number of exogeneous latent processes (only used for formative structural model)
+#'  @param mapping.to.LP2 indicates which outcome measured which exogenous latent process, it is a mapping table between
+#'  outcomes and exogenous latents processes (only used for formative structural model)
 #' @param link indicates link used to transform outcome
 #' @param knots indicates position of knots used to transform outcomes 
 #' @param subject indicates the name of the covariate representing the grouping structure
@@ -59,7 +62,7 @@
 #' @importFrom survival Surv
 #' 
 DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.models, randoms_DeltaX.models, mod_trans.model, 
-                           DeltaT, outcomes, nD, mapping.to.LP, link, knots=NULL, subject, data, Time, 
+                           DeltaT, outcomes, nD, mapping.to.LP,nL,mapping.to.LP2, link, knots=NULL, subject, data, Time, 
                            Survdata = NULL, basehaz = NULL, knots_surv=NULL, assoc = 0, truncation = FALSE, fixed.survival.models = NULL, 
                            interactionY.survival.models = NULL, predict_ui = NULL, 
                            makepred, MCnr_pred, MCnr, MCnr2, type_int = NULL, sequence = NULL, ind_seq_i = NULL, nmes = NULL, cholesky= FALSE,
@@ -126,15 +129,31 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
                              DeltaT = DeltaT, maxiter = univarmaxiter, epsd = epsd, nproc = nproc, print.info = print.info, 
                              TimeDiscretization = TimeDiscretization, fixed.survival.models = fixed.survival.models, 
                              Tentry = Tentry, Event = Event, StatusEvent = StatusEvent, assocT = assocT, truncation = truncation)
-  }
+  
+    if(!is.null(nL)){#formative structure
+      w <- rep(1,nL)/rle(mapping.to.LP2)$length
+      paras.ini <- c(paras.ini,w)
+    }
+    }
   npara_k <- sapply(outcomes, function(x) length(grep(x, names(data.frame(data_F$Mod.MatrixY)))))
 
-  paras <- Parametre(K=K, nD = nD, vec_ncol_x0n, n_col_x, nb_RE, indexparaFixeUser = indexparaFixeUser, 
-                     paraFixeUser = paraFixeUser, L = L, ncolMod.MatrixY = ncolMod.MatrixY, paras.ini=paras.ini, 
-                     link = link, npara_k = npara_k, 
-                     Survdata = Survdata, basehaz = basehaz, knots_surv = knots_surv, assoc = assoc, truncation = truncation,
-                     data = data, outcomes = outcomes, df= data_F$df, nE = data_F$nE, np_surv = data_F$np_surv, 
-                     fixed.survival.models =fixed.survival.models, interactionY.survival.models = interactionY.survival.models, nYsurv = data_F$nYsurv)
+  if(!is.null(nL)){
+    
+    paras <- Parametre_formative(K=K, nD = nD,mapping.to.LP=mapping.to.LP,nL=nL,mapping.to.LP2=mapping.to.LP2, vec_ncol_x0n, n_col_x, nb_RE, indexparaFixeUser = indexparaFixeUser, 
+                        paraFixeUser = paraFixeUser, L = L, ncolMod.MatrixY = ncolMod.MatrixY, paras.ini=paras.ini, 
+                        link = link, npara_k = npara_k, 
+                        Survdata = Survdata, basehaz = basehaz, knots_surv = knots_surv, assoc = assoc, truncation = truncation,
+                        data = data, outcomes = outcomes, df= data_F$df, nE = data_F$nE, np_surv = data_F$np_surv, 
+                        fixed.survival.models =fixed.survival.models, interactionY.survival.models = interactionY.survival.models, nYsurv = data_F$nYsurv,data_F=data_F)
+  return(paras)
+    }else{
+    paras <- Parametre(K=K, nD = nD, vec_ncol_x0n, n_col_x, nb_RE, indexparaFixeUser = indexparaFixeUser, 
+                       paraFixeUser = paraFixeUser, L = L, ncolMod.MatrixY = ncolMod.MatrixY, paras.ini=paras.ini, 
+                       link = link, npara_k = npara_k, 
+                       Survdata = Survdata, basehaz = basehaz, knots_surv = knots_surv, assoc = assoc, truncation = truncation,
+                       data = data, outcomes = outcomes, df= data_F$df, nE = data_F$nE, np_surv = data_F$np_surv, 
+                       fixed.survival.models =fixed.survival.models, interactionY.survival.models = interactionY.survival.models, nYsurv = data_F$nYsurv)
+  }
   if_link <- rep(0,K)
   for(k in 1:K){
     if(!link[k] %in%c("linear","thresholds")){

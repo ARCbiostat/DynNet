@@ -27,6 +27,7 @@ enter_param(
   fix.var.errors = rep(0, length(var.errors)),
   transformationY,
   fix.transformationY = rep(0, length(transformationY)),
+  weights = NULL,
   baseline1 = NULL,
   fix.baseline1 = rep(0, length(baseline1)),
   p.X1 = NULL,
@@ -129,6 +130,8 @@ enter_param(
 \item{transformationY}{initial values for the marker-specific transformation functions (see links in DynNet help)}
 
 \item{fix.transformationY}{indicator if the parameters \code{transformationY} are fixed.}
+
+\item{weights}{weights of exogenous latent processes (only used for formative structural model)}
 
 \item{baseline1}{initial values for the baseline hazard function in the time-to-event model (in the survival setting) or in the first transition model (in the competing risks setting).}
 

@@ -70,6 +70,7 @@
 #' @param transformationY initial values for the marker-specific transformation functions (see links in DynNet help)
 #' @param fix.transformationY indicator if the parameters \code{transformationY} are fixed.
 #' @param baseline1 initial values for the baseline hazard function in the time-to-event model (in the survival setting) or in the first transition model (in the competing risks setting).
+#' @param weights weights of exogenous latent processes (only used for formative structural model)
 #' @param fix.baseline1 indicator if the parameters \code{baseline1} are fixed.
 #' @param p.X1 initial values for the covariate fixed effects (excluding association and latent-process interaction parameters)in the time-to-event model (in the survival setting) or in the first transition model (in the competing risks setting).
 #' @param fix.p.X1 indicator if the parameters \code{p.X1} are fixed.
@@ -202,6 +203,7 @@ enter_param<-function(structural.model,
                       fix.var.errors=rep(0,length(var.errors)),
                       transformationY,
                       fix.transformationY=rep(0,length(transformationY)),
+                      weights=NULL,
                       baseline1=NULL,
                       fix.baseline1=rep(0,length(baseline1)),
                       p.X1=NULL,
@@ -283,9 +285,12 @@ enter_param<-function(structural.model,
   outcome <- as.character(attr(terms(fixed_DeltaX),"variables"))[2]
   outcomes_by_LP<-strsplit(outcome,"[|]")[[1]]
   nD <- length(outcomes_by_LP) # nD: number of latent process
-  
+  if(any(grepl("()",outcomes_by_LP))){
+    formative <- TRUE
+  }
   outcomes <- NULL
   mapping.to.LP <- NULL
+  mapping.to.LP2 <- NULL
   for(n in 1:nD){
     outcomes_n <- strsplit(outcomes_by_LP[n],"[+]")[[1]]
     outcomes_n <-as.character(sapply(outcomes_n,FUN = function(x)gsub("[[:space:]]","",x),simplify = FALSE))
@@ -294,17 +299,39 @@ enter_param<-function(structural.model,
     outcomes <- c(outcomes, outcomes_n)
     mapping.to.LP <- c(mapping.to.LP, rep(n,length(outcomes_n)))
   }
+  if(formative){
+    outcomes <- as.character(sapply(outcomes,FUN = function(x)gsub("[()+]","",x),simplify = FALSE))
+    for (n in 1:nD){
+      outcomes_n <-  regmatches(outcomes_by_LP[n], gregexpr("\\([^()]*\\)|Y\\d+", outcomes_by_LP[n]))[[1]]
+      outcomes_n <-as.character(sapply(outcomes_n,FUN = function(x)gsub("[()]","",x),simplify = FALSE))
+      outcomes_n <-as.character(sapply(outcomes_n,FUN = function(x)gsub("[[:space:]]","",x),simplify = FALSE))
+      outcomes_n <- unique(outcomes_n)
+      for (l in 1:length(outcomes_n)){
+        outcomes_n2 <- regmatches(outcomes_n[l], gregexpr("Y\\d+", outcomes_n[l]))[[1]]
+        if(is.null(outcomes_n2)) stop("at least one marker must be specified for each latent exogeneous process" )
+        add <- ifelse(n==1,0,max(mapping.to.LP2))
+        mapping.to.LP2 <- c(mapping.to.LP2, rep(l+add,length(outcomes_n2)))
+      }
+      
+    }
+  }
   
   K <- length(outcomes)
   all.Y<-seq(1,K)
-  
+  nL <- ifelse(formative==T,max(mapping.to.LP2),NULL)
   fixed_DeltaX.model=strsplit(gsub("[[:space:]]","",as.character(fixed_DeltaX)),"~")[[3]]
   fixed_DeltaX.models<-strsplit(fixed_DeltaX.model,"[|]")[[1]]# chaque model d'effet fixe mais en vu de connaitre tous les pred.fixed du modele multi
   
   if(nD !=length(fixed_DeltaX.models)) stop("The number of models does not correspond to the number of latent processes")
   
-  if(nD > K){
-    stop("There are too many latent processes compared to the indicated number of markers")
+  if(formative){
+    if(nL > K){
+      stop("There are too many latent processes compared to the indicated number of markers")
+    }
+  }else{
+    if(nD > K){
+      stop("There are too many latent processes compared to the indicated number of markers")
+    }
   }
   
   ### pre-traitement of fixed effect on initial levels of processes
@@ -964,6 +991,25 @@ enter_param<-function(structural.model,
   cpt1 <- cpt1 + ncolMod.MatrixY
   p <- p + ncolMod.MatrixY
   
+  if(formative & nL!=length(weights))stop(paste("Weights should be of length",nL,"not",length(weights)))
+  p <- p+nL
+  if(formative){
+    mappingLP2LP1 <- pmin(table(mapping.to.LP2, mapping.to.LP), 1)
+    mappingLP2LP1_weights <- mappingLP2LP1 * weights
+    sum_w <- apply(mappingLP2LP1_weights, 2, sum)
+    end_zero <- apply(mappingLP2LP1_weights, 2, function(x)
+      any(x == 1)) & apply(mappingLP2LP1, 2, sum) > 1
+    if (any(sum_w != 1))
+      stop(
+        "Initial values for the weights of the formative part of the structural model need to sum to 1 within each endogenous latent process"
+      )
+    if (any(end_zero == TRUE))
+      stop(
+        "Some initial values for the weights reduce formative structure of the model by putting weight=1"
+      )
+    
+  }
+  
   
   #Survival
   para_surv <- NULL
@@ -1053,7 +1099,18 @@ enter_param<-function(structural.model,
   
   
   #final vector of initial parameters
-  paras <- c(alpha_mu0, alpha_mu, alpha_D, vec_alpha_ij,  paraB, paraSig, ParaTransformY)
+  paras <- c(alpha_mu0, alpha_mu, alpha_D, vec_alpha_ij,  paraB, paraSig, ParaTransformY,weights)
+  if(formative){
+    paras <- list(alpha_mu0=alpha_mu0, 
+                  alpha_mu=alpha_mu, 
+                  alpha_D=alpha_D, 
+                  vec_alpha_ij=vec_alpha_ij,  
+                  paraB=paraB, 
+                  paraSig=paraSig, 
+                  ParaTransformY=ParaTransformY,
+                  weights=weights,
+                  para_surv=para_surv)
+  }
   t1 <- 0
   t2 <- 0
   
@@ -1081,9 +1138,35 @@ enter_param<-function(structural.model,
                          fix.parab, fix.var.errors, fix.transformationY, fix.baseline1, 
                          fix.p.X1, fix.p.asso1, fix.p.asso.int1, fix.baseline2, fix.p.X2, 
                          fix.p.asso2, fix.p.asso.int2)
-  if(!all(indparaFixeUser==0)){
+  
+  if(!all(indparaFixeUser==0) & !formative){
     indexparaFixeUser <- which(indparaFixeUser==1)
     Fixed.para.values <- paras[indexparaFixeUser]
+    }else if(!all(indparaFixeUser==0) & formative){
+      indparaFixeUser <- list(
+        alpha_mu0=fix.p.initlev,
+        alpha_mu=fix.p.slope,
+        alpha_D=fix.varcovRE,
+        vec_alpha_ij=fix.transitionmatrix,
+        paraB=fix.parab,
+        paraSig=fix.var.errors,
+        ParaTransformY=fix.transformationY,
+        weights=weights,
+        para_surv=c(fix.baseline1,
+                    fix.p.X1,
+                    fix.p.asso1,
+                    fix.p.asso.int1,
+                    fix.baseline2,
+                    fix.p.X2,
+                    fix.p.asso2,
+                    fix.p.asso.int2
+        ))
+      indexparaFixeUser <- lapply(indparaFixeUser,function(x)which(x==1))
+      Fixed.para.values <- lapply(1:length(indexparaFixeUser),function(x)paras[[x]][indexparaFixeUser[[x]]])
+      names(indexparaFixeUser) <- names(indparaFixeUser)
+      names(Fixed.para.values) <- names(indparaFixeUser)
+      
+    
   }else{
     stop("at least one parameter should be fixed for identifiability purposes.")
   }
