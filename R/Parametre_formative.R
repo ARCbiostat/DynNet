@@ -112,12 +112,13 @@ Parametre_formative <- function(K,
     
     #random effects
     alpha_D <- paras.ini$alpha_D
+    print(nb_RE)
+    alpha_D_matrix <- DparChol(nb_RE,alpha_D)
     
     RE_z0 <- as.integer(sub("\\(.*\\)", "", names_z0))
     RE_z <- as.integer(sub("\\(.*\\)", "", names_z))
-    map_p$alpha_D <- rep(c(RE_z0, RE_z), times = 1:nb_RE)
-    names(map_p$alpha_D) <- paste0("alpha_D", 1:length(alpha_D))
-    
+    colnames(alpha_D_matrix) <- c(names_z0,names_z)
+    rownames(alpha_D_matrix) <- c(names_z0,names_z)
    
     # para of transition matrix vec_alpha_ij
     vec_alpha_ij <- paras.ini$vec_alpha_ij
@@ -223,15 +224,24 @@ Parametre_formative <- function(K,
     paraFixe_alpha_mu_trans <- NULL
   }
   
+  indexFixe_alpha_D <- rep(0,length(alpha_D))
+  indexFixe_alpha_D[indexparaFixeUser$alpha_D] <- 1
+  indexFixe_alpha_D_matrix <- DparChol(nb_RE,indexFixe_alpha_D)
+  
   #alpha_D
-  # currently a nightmare so lets go on 
-  # map_alpha_D <- map_p[which(grepl("alpha_D",names(map_p)))]
-  # 
-  # alpha_D
-  # 
-  # alpha_D_trans <- unlist(lapply(1:nD,function(x)lapply(para_weights[map_weights==x],function(l)alpha_D[map_alpha_D==x]*l)))
-  # indexFixe_alpha_mu <- intersect(which(grepl("alpha_mu",names(map_p))  & !grepl("alpha_mu0",names(map_p))),indexFixe)
-  # 
+  alpha_D_matrix_trans <- recover_omega_cov(
+    Blambda   = alpha_D_matrix,
+    Blambda_fixed = indexFixe_alpha_D_matrix,
+    mappingL1L2   = mappingLP2LP1_weights,
+    method        = "structured",
+    rho_int0       = 0,
+    rho_int       = 0,
+    rho_slope     = 0
+  )
+  chol_D_block <- chol_by_block(alpha_D_matrix_trans[[1]],nL=3)
+  alpha_D_trans <- as.numeric(chol_D_block[lower.tri(chol_D_block, diag = TRUE)])
+  indexFixe_alpha_D_trans_matrix <- alpha_D_matrix_trans[[2]]
+  indexFixe_alpha_D_trans_matrix <- which(as.numeric(indexFixe_alpha_D_trans_matrix[lower.tri(indexFixe_alpha_D_trans_matrix, diag = TRUE)])==1)
   
   #vec_alpha_ij
   vec_alpha_ij_trans <-invert_vec_alpha_ij(matrix(vec_alpha_ij,nrow=nD,byrow = T),mappingLP2LP1_weights)

@@ -666,7 +666,8 @@ DynNet <- function(structural.model, measurement.model, parameters,
                         paras.ini= paras.ini, paraFixeUser = paraFixeUser, indexparaFixeUser = indexparaFixeUser,  
                         maxiter = maxiter, zitr = zitr, ide = ide0, univarmaxiter = univarmaxiter, nproc = nproc, epsa = epsa, epsb = epsb, epsd = epsd, 
                         print.info = print.info, TimeDiscretization = TimeDiscretization, Tentry = Tentry, Event = Event, StatusEvent = StatusEvent)
-
+   
+  return(est)
   est$call <- match.call()
   est$formula <- list(fixed_X0.models=fixed_X0.models, fixed_DeltaX.models = fixed_DeltaX.models, 
                       randoms_X0.models=randoms_X0.models, randoms_DeltaX.models=randoms_DeltaX.models, 
