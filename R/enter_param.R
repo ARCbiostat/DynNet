@@ -106,7 +106,13 @@
 #'                                       delta.time = Delta)
 #' measurement.model = list(link.functions = list(links = c(NULL,NULL),
 #'                                       knots = list(NULL, NULL)))
-#'                                       
+#' enter_param(structural.model = structural.model,
+#'            measurement.model = measurement.model,
+#'            Time = "time",
+#'            subject = "id",
+#'            data = data,
+#'            get_help=T)
+#'                                                  
 #' Parameters <- enter_param(structural.model = structural.model,
 #'               measurement.model = measurement.model,
 #'               Time = "time",
@@ -900,6 +906,9 @@ enter_param<-function(structural.model,
   #if get_help
   
   if(get_help){
+    
+    cat("**Please run `enter_param()` again, following the instructions below regarding which parameters to include and the required length of initial values based on your model specification.**\n")
+    cat("\n")
     p <- 0 # position in the initialize parameters
     cpt1 <-0 # counter for parameterd
     cpt2<-0 # loop counter
