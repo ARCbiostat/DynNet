@@ -43,7 +43,8 @@ enter_param(
   p.asso2 = NULL,
   fix.p.asso2 = rep(0, length(p.asso2)),
   p.asso.int2 = NULL,
-  fix.p.asso.int2 = rep(0, length(p.asso.int2))
+  fix.p.asso.int2 = rep(0, length(p.asso.int2)),
+  get_help = F
 )
 }
 \arguments{
@@ -164,13 +165,16 @@ enter_param(
 \item{p.asso.int2}{initial values for the interactions between covariates and functions of the latent processes in the second transition model (competing risks setting only). Default to NULL.}
 
 \item{fix.p.asso.int2}{indicator if the parameters \code{p.asso.int2} are fixed.}
+
+\item{get_help}{logical vector indicating if the dimension of each type of initial values required by the specified model should be printed.Default to FALSE.}
 }
 \value{
 A list with the following elements:
 \describe{
   \item{paras.ini}{Vector of initial values for all parameters.}
   \item{Fixed.para.index}{Vector containing the indexes of the parameters to be fixed.}
-  \item{Fixed.para.values}{Vector of fixed values corresponding to the parameters specified in \code{Fixed.para.index}.}
+  \item{Fixed.para.values}{Vector of fixed values corresponding to the parameters specified in \code{Fixed.para.index}.
+  or NULL if get_help=T}
 }
 }
 \description{

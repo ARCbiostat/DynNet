@@ -174,6 +174,13 @@ structural.model = list(fixed.LP0 = ~ 1 + C2 | 1 + C2,
 measurement.model = list(link.functions = list(links = c(NULL,NULL),
                                       knots = list(NULL, NULL)))
                                       
+enter_param(structural.model = structural.model,
+           measurement.model = measurement.model,
+           Time = "time",
+           subject = "id",
+           data = data,
+           get_help=T)
+                                      
 Parameters <- enter_param(structural.model = structural.model,
               measurement.model = measurement.model,
               Time = "time",

@@ -86,11 +86,13 @@
 #' @param fix.p.asso2 indicator if the parameters \code{p.asso2} are fixed.
 #' @param p.asso.int2 initial values for the interactions between covariates and functions of the latent processes in the second transition model (competing risks setting only). Default to NULL.
 #' @param fix.p.asso.int2 indicator if the parameters \code{p.asso.int2} are fixed.
+#' @param get_help logical vector indicating if the dimension of each type of initial values required by the specified model should be printed.Default to FALSE.
 #' @return A list with the following elements:
 #' \describe{
 #'   \item{paras.ini}{Vector of initial values for all parameters.}
 #'   \item{Fixed.para.index}{Vector containing the indexes of the parameters to be fixed.}
-#'   \item{Fixed.para.values}{Vector of fixed values corresponding to the parameters specified in \code{Fixed.para.index}.}
+#'   \item{Fixed.para.values}{Vector of fixed values corresponding to the parameters specified in \code{Fixed.para.index}.
+#'   or NULL if get_help=T}
 #'}
 #' @export
 #' @importFrom splines bs
@@ -219,8 +221,27 @@ enter_param<-function(structural.model,
                       p.asso2=NULL,
                       fix.p.asso2=rep(0,length(p.asso2)),
                       p.asso.int2=NULL,
-                      fix.p.asso.int2=rep(0,length(p.asso.int2))
+                      fix.p.asso.int2=rep(0,length(p.asso.int2)),
+                      get_help=F
 ){
+  
+  
+  # put default if get_help
+  
+  if(get_help){
+    p.initlev=NA
+    
+    p.slope=NA
+   
+    varcovRE=NA
+   
+    transitionmatrix=NA
+    
+    var.errors=NA
+    
+    transformationY=NA
+  }
+  
   ### check if all component of the model specification are well filled ####
   if(missing(structural.model))stop("The argument structural.model must be specified")
   if(missing(measurement.model))stop("The argument measurement.model must be specified")
@@ -876,7 +897,192 @@ enter_param<-function(structural.model,
   if(is.null(basehaz))
     basehaz<-"Weibull" #not to have NULL value in C++ code
   
+  #if get_help
+  
+  if(get_help){
+    p <- 0 # position in the initialize parameters
+    cpt1 <-0 # counter for parameterd
+    cpt2<-0 # loop counter
+    #alpha_mu0
+    
+    cat("Parameters for the fixed effects of the model describing the initial level of the processes:\n")
+    cat("p.initlev and fix.p.initlev should contain ",length((p+1):(p+sum(vec_ncol_x0n)))," parameters.\n")
+    
+    
+    alpha_mu0 <- p.initlev#paras.ini[(p+1):(p+sum(vec_ncol_x0n))]
+    p <- p+ sum(vec_ncol_x0n)
+    index_paraFixe_mu0_constraint <-NULL
+    for(n in 1:nD){
+      #alpha_mu0[(cpt2+1)] <- 0
+      cpt2 <- cpt2 + vec_ncol_x0n[n]
+      cpt1 <- cpt1 + vec_ncol_x0n[n]
+    }
+    paraFixe_mu0_constraint <- rep(1,nD)
+    #alpha_mu
+    
+    cat("\n")
+    cat("Parameters for the fixed effects of the model describing the change over time of the latent processes:\n")
+   
+    cat("p.slope and fix.p.slope should contain ",length((p+1):(p+n_col_x))," parameters.\n")
+    
+
+    alpha_mu <- p.slope#paras.ini[(p+1):(p+n_col_x)]
+    p <- p+n_col_x
+    cpt1 <- cpt1 + n_col_x
+    
+    #alpha_D parameters for cholesky of all random effects
+    cat("\n")
+    cat("Var/Cov matrix random effects parameters:\n")
+    cat("varcovRE and fix.varcovRE should contain ",length((p+1):(p+nb_paraD))," parameters.\n")
+    
+
+    
+    alpha_D <- varcovRE#paras.ini[(p+1):(p+nb_paraD)]
+    to_nrow <- nb_RE
+    i_alpha_D <- 0
+    index_paraFixeDconstraint <- NULL
+    
+    for(n in 1:nD){
+      #if(link[n] != "thresholds")
+      #alpha_D[i_alpha_D+1] <- 1
+      i_alpha_D <- i_alpha_D + to_nrow
+      cpt1 <- cpt1 + to_nrow
+      to_nrow <- to_nrow -1
+    }
+    p <- p+nb_paraD
+    paraFixeDconstraint <- rep(1,nD)
+    # para of transition matrix vec_alpha_ij
+    #alpha_D parameters for cholesky of all random effects
+    cat("\n")
+    cat("Transition matrix parameters:\n")
+    
+    cat("transitionmatrix and fix.transitionmatrix should contain ",length((p+1):(p + L*nD*nD))," parameters.\n")
+    
+    vec_alpha_ij <- transitionmatrix#paras.ini[(p+1):(p + L*nD*nD)]
+    p <- p + L*nD*nD
+    cpt1 <- cpt1 + L*nD*nD
+    # paraB
+    paraB <- NULL
+    stochErr = F
+    parab=NULL
+    fix.parab=NULL
+    if(stochErr==TRUE){
+      cat("\n")
+      cat("Stochastic error parameters:\n")
+      
+      cat("paraB and fix.paraB should contain ",length((p+1):(p + nD))," parameters.\n")
+    
+      
+      paraB <- parab#paras.ini[(p+1):(p + nD)]
+      p <- p + nD
+      cpt1 <- cpt1 + nD
+    }
+    #paraSig
+    cat("\n")
+    cat("Measurament error parameters:\n")
+    cat("var.errors and fix.var.errors should contain ",length((p+1):(p + K))," parameters.\n")
+    
+    paraSig <- var.errors#paras.ini[(p+1):(p + K)]
+    p <- p + K
+    cpt1 <- cpt1 + K
+    
+    ### para of link function
+    cat("\n")
+    cat("Link function parameters:\n")
+    
+    cat("transformationY and fix.transformationY should contain ",length((p+1):(p + ncolMod.MatrixY))," parameters.\n")
+   
+    ParaTransformY <- transformationY#paras.ini[(p+1):(p + ncolMod.MatrixY)]
+    i_para <- 0
+    
+    
+    cpt1 <- cpt1 + ncolMod.MatrixY
+    p <- p + ncolMod.MatrixY
+    cat("\n")
+    cat("Parameters for formative part of the structural model:\n")
+    if(formative & nL!=length(weights))cat(paste0("Weights should be of length ",nL,".\n"))
+    
+    p <- p+nL
+    
+    
+    #Survival
+    para_surv <- NULL
+    para_basehaz <- NULL
+    knots_surv <- c(0,0) # changer !!
+    if(!is.null(Survdata)){
+      cat("\n")
+      cat("Survival parameters:\n")
+      np_baz <- ifelse(basehaz=="Weibull",2, 0)# changer 0!!
+      
+      for (jj in 1:nE){
+        if(jj==1){
+          
+            cat("baseline1 and fix.baseline1 should contain ",length((p+1) : (p + np_baz))," parameters.\n")
+          
+          
+          para_basehaz <- c(para_basehaz, baseline1)#paras.ini[(p+1) : (p + np_baz)])  
+          
+        }else{
+          
+          
+            cat("baseline2 and fix.baseline2 should contain ",length((p+1) : (p + np_baz))," parameters.\n")
+          
+           
+          para_basehaz <- c(para_basehaz, baseline2)#paras.ini[(p+1) : (p + np_baz)])  
+          
+        }
+        #para_basehaz <- c(para_basehaz, paras.ini[(p+1) : (p + np_baz)])  
+        p <- p + np_baz  # change here?
+        #}
+        #for (jj in 1:nE){
+        if(jj==1){
+          
+          
+           cat("p.X1 and fix.p.X1 should contain ",dim(Xsurv)[2]," parameters.\n")
+         
+          
+          
+           cat("p.asso1 and fix.p.asso1 should contain ",ifelse(assoc%in%c(0, 1, 3, 4),1,2)*nD," parameters.\n")
+          
+           
+          
+           cat("p.asso.int1 and fix.p.asso.int1 should contain ",nYS[1]*ifelse(assoc%in%c(0, 1, 3, 4),1,2)*nD," parameters.\n")
+        
+          
+          
+          
+         
+          
+        }else{
+          
+          
+           cat("p.X2 and fix.p.X2 should contain ",dim(Xsurv)[2]," parameters.\n")
+        
+          
+          
+           cat("p.asso2 and fix.p.asso2 should contain ",ifelse(assoc%in%c(0, 1, 3, 4),1,2)*nD," parameters.\n")
+          
+           
+        
+           cat("p.asso.int2 and fix.p.asso.int2 should contain ",nYS[2]*ifelse(assoc%in%c(0, 1, 3, 4),1,2)*nD," parameters.\n")
+        
+           
+          para_surv <- c(para_surv, p.X2, p.asso2, p.asso.int2)#paras.ini[(p+1) : (p + np_baz)])  
+          
+        }
+        #para_surv <- c(para_surv, paras.ini[(p + 1 ) : (p + np_surv[jj])]) 
+        p <- p + np_surv[jj] # change here?
+      }
+      if(basehaz=="Splines") cat('add number of parameters for splines in p and para_surv')
+      if(basehaz=="Splines") cat('Define knots_surv para_basehaz')
+      
+    }
+    
+    return(NULL)
+  }
+  
   # if user specified initial parameters
+  
   
   p <- 0 # position in the initialize parameters
   cpt1 <-0 # counter for parameterd
@@ -884,10 +1090,10 @@ enter_param<-function(structural.model,
   #alpha_mu0
 
   if(length(p.initlev)!=length((p+1):(p+sum(vec_ncol_x0n)))){
-    stop("p.initlev should contain ",length((p+1):(p+sum(vec_ncol_x0n)))," parameters.")
+    stop("p.initlev should contain ",length((p+1):(p+sum(vec_ncol_x0n)))," parameters.\n")
   }
   if(length(fix.p.initlev)!=length((p+1):(p+sum(vec_ncol_x0n)))){
-    stop("fix.p.initlev should contain ",length((p+1):(p+sum(vec_ncol_x0n)))," parameters.")
+    stop("fix.p.initlev should contain ",length((p+1):(p+sum(vec_ncol_x0n)))," parameters.\n")
   }
 
   
@@ -902,10 +1108,10 @@ enter_param<-function(structural.model,
   paraFixe_mu0_constraint <- rep(1,nD)
   #alpha_mu
   if(length(p.slope)!=length((p+1):(p+n_col_x))){
-    stop("p.slope should contain ",length((p+1):(p+n_col_x))," parameters.")
+    stop("p.slope should contain ",length((p+1):(p+n_col_x))," parameters.\n")
   }
   if(length(fix.p.slope)!=length((p+1):(p+n_col_x))){
-    stop("fix.p.slope should contain ",length((p+1):(p+n_col_x))," parameters.")
+    stop("fix.p.slope should contain ",length((p+1):(p+n_col_x))," parameters.\n")
   }
   alpha_mu <- p.slope#paras.ini[(p+1):(p+n_col_x)]
   p <- p+n_col_x

@@ -34,7 +34,11 @@ Parametre_formative(
   fixed.survival.models = NULL,
   interactionY.survival.models = NULL,
   nYsurv = 0,
-  data_F = data_F
+  names_x,
+  names_x0,
+  names_z,
+  names_z0,
+  names_y
 )
 }
 \arguments{
