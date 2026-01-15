@@ -13,7 +13,7 @@
 #' @param stochErr indicates if the structural model contain stochastique components
 #' @param indexparaFixeUser position of parameters to be constrained
 #' @param paraFixeUser values associated to the index of parameters to be constrained
-#' @param L number of columns of model.matrix for temporal infuences model
+#' @param L number of columns of model.matrix for temporal influences model
 #' @param paras.ini initial values for parameters, default values is NULL
 #' @param ncolMod.MatrixY vector of number of columns of model.matrix for transformation submodel
 #' @param link indicates link used to transform outcome
@@ -99,32 +99,64 @@ Parametre_formative <- function(K,
 
     map_p <-list() #attribution of parameters to latent process
     
+    p <- 0 # position in the initialize parameters
+    cpt1 <-0 # counter for parameterd
+    cpt2<-0 # loop counter
     
     #alpha_mu0
     alpha_mu0 <- paras.ini$alpha_mu0
     map_p$alpha_mu0 <- as.integer(sub("^LP0\\.(\\d+).*", "\\1", names_x0))
     names(map_p$alpha_mu0) <- paste0("alpha_mu0", 1:length(alpha_mu0))
     
+    #counting
+    p <- p+ sum(vec_ncol_x0n)
+    index_paraFixe_mu0_constraint <-NULL
+    for(n in 1:nD){
+      #alpha_mu0[(cpt2+1)] <- 0
+      cpt2 <- cpt2 + vec_ncol_x0n[n]
+      cpt1 <- cpt1 + vec_ncol_x0n[n]
+    }
+    paraFixe_mu0_constraint <- rep(1,nD)
+    
     #alpha_mu
     alpha_mu <- paras.ini$alpha_mu
     map_p$alpha_mu <- as.integer(sub("^DeltaLP\\.(\\d+).*", "\\1", names_x))
     names(map_p$alpha_mu) <- paste0("alpha_mu", 1:length(alpha_mu))
     
+    p <- p+n_col_x
+    cpt1 <- cpt1 + n_col_x
+    
     #random effects
     alpha_D <- paras.ini$alpha_D
-    print(nb_RE)
     alpha_D_matrix <- DparChol(nb_RE,alpha_D)
     
     RE_z0 <- as.integer(sub("\\(.*\\)", "", names_z0))
     RE_z <- as.integer(sub("\\(.*\\)", "", names_z))
     colnames(alpha_D_matrix) <- c(names_z0,names_z)
     rownames(alpha_D_matrix) <- c(names_z0,names_z)
+    
+    #counting
+    to_nrow <- nb_RE
+    i_alpha_D <- 0
+    index_paraFixeDconstraint <- NULL
+    
+    for(n in 1:nD){
+      #if(link[n] != "thresholds")
+      #alpha_D[i_alpha_D+1] <- 1
+      i_alpha_D <- i_alpha_D + to_nrow
+      cpt1 <- cpt1 + to_nrow
+      to_nrow <- to_nrow -1
+    }
+    p <- p+nb_paraD
+    paraFixeDconstraint <- rep(1,nD)
    
     # para of transition matrix vec_alpha_ij
     vec_alpha_ij <- paras.ini$vec_alpha_ij
     map_p$vec_alpha_ij <- rep(1:nD, each = nD)# to check if correct
     names(map_p$vec_alpha_ij) <- paste0("vec_alpha_ij", 1:length(vec_alpha_ij))
     
+    p <- p + L*nD*nD
+    cpt1 <- cpt1 + L*nD*nD
     
     # paraB
     paraB <- NULL
@@ -132,6 +164,9 @@ Parametre_formative <- function(K,
       paraB <- paras.ini$paraB
       map_p$paraB <- 1:nD
       names(map_p$paraB) <- paste0("paraB", 1:length(paraB))
+      
+      p <- p + nD
+      cpt1 <- cpt1 + nD
     }
     
     #paraSig
@@ -139,6 +174,8 @@ Parametre_formative <- function(K,
     map_p$paraSig <- mapping.to.LP
     names(map_p$paraSig)<- paste0("paraSig", 1:length(paraSig))
     
+    p <- p + K
+    cpt1 <- cpt1 + K
     
     ### para of link function
     ParaTransformY <- paras.ini$ParaTransformY
@@ -155,6 +192,9 @@ Parametre_formative <- function(K,
       "\\..*", "", names_y
     ))))
     names(map_p$ParaTransformY) <- paste0("ParaTransformY", 1:length(ParaTransformY))
+    
+    cpt1 <- cpt1 + ncolMod.MatrixY
+    p <- p + ncolMod.MatrixY
     
     
     # Weigths for formative structural model
@@ -177,8 +217,25 @@ Parametre_formative <- function(K,
                                      as.numeric(apply(mappingLP2LP1, 2, sum)))
     names(map_p$weights) <- paste0("para_weights", 1:length(para_weights))
     
+    p <- p + nL
+    
   #Survival
   para_surv <- paras.ini$para_surv
+  
+  if(!is.null(Survdata)){
+   
+    np_baz <- ifelse(basehaz=="Weibull",2, 0)# changer 0!!
+    
+    for (jj in 1:nE){
+     
+      p <- p + np_baz  # change here?
+  
+      p <- p + np_surv[jj] # change here?
+    }
+    if(basehaz=="Splines") cat('add number of parameters for splines in p and para_surv')
+    if(basehaz=="Splines") cat('Define knots_surv para_basehaz')
+    
+  }
   
   #final vector of initial parameters
   paras <- c(
@@ -192,6 +249,13 @@ Parametre_formative <- function(K,
     para_weights,
     para_surv
   )
+  
+ 
+  
+  if(!is.null(paras.ini)){
+    if( length(paras) != p ){
+      stop("The length of paras.ini is not correct.")
+  }}
   
   # here I start transforming parameters
   
@@ -238,13 +302,18 @@ Parametre_formative <- function(K,
     rho_int       = 0,
     rho_slope     = 0
   )
-  chol_D_block <- chol_by_block(alpha_D_matrix_trans[[1]],nL=3)
+  
+  reps <- length(row.names(alpha_D_matrix_trans[[1]])[-c(1:nL)])/nL
+  blocks <- c(1:nL,rep(apply(mappingL1L2,1,function(x)which(x!=0)),times=reps)+(nL+1))
+  chol_D_block <- chol_by_block(alpha_D_matrix_trans[[1]],blocks = blocks)
   alpha_D_trans <- as.numeric(chol_D_block[lower.tri(chol_D_block, diag = TRUE)])
   indexFixe_alpha_D_trans_matrix <- alpha_D_matrix_trans[[2]]
-  indexFixe_alpha_D_trans_matrix <- which(as.numeric(indexFixe_alpha_D_trans_matrix[lower.tri(indexFixe_alpha_D_trans_matrix, diag = TRUE)])==1)
+  indexFixe_alpha_D_matrix <- indexFixe_alpha_D_trans_matrix[lower.tri(indexFixe_alpha_D_trans_matrix, diag = TRUE)]
+  indexFixe_alpha_D_trans <- which(indexFixe_alpha_D_matrix==1)
   
   #vec_alpha_ij
-  vec_alpha_ij_trans <-invert_vec_alpha_ij(matrix(vec_alpha_ij,nrow=nD,byrow = T),mappingLP2LP1_weights)
+  vec_alpha_ij_trans <-as.vector(t(invert_vec_alpha_ij(matrix(vec_alpha_ij,nrow=nD,byrow = T),mappingLP2LP1_weights)))
+  indexFixe_vec_alpha_ij_trans <- if(length(indexparaFixeUser$vec_alpha_ij)>0)map_fixed_lambda_to_omega(indexparaFixeUser$vec_alpha_ij,mappingL1L2)else integer(0)
   
   paras_trans <- c(
     alpha_mu0_trans,
@@ -257,6 +326,25 @@ Parametre_formative <- function(K,
     para_surv
   )
   
+
+  indexparaFixeUser_trans <- c(indexFixe_alpha_mu0_trans,
+                               indexFixe_alpha_mu_trans,
+                               indexFixe_alpha_D_trans,
+                               indexFixe_vec_alpha_ij_trans,
+                               indexparaFixeUser$paraB,
+                               indexparaFixeUser$paraSig,
+                               indexparaFixeUser$ParaTransformY,
+                               indexparaFixeUser$para_surv)
+  
+  
+  paraFixeUser_trans <- c(alpha_mu0_trans[indexFixe_alpha_mu0_trans],
+                          alpha_mu_trans[indexFixe_alpha_mu_trans],
+                          alpha_D_trans[indexFixe_alpha_D_trans],
+                          vec_alpha_ij_trans[indexFixe_vec_alpha_ij_trans],
+                          paraFixeUser$paraB,
+                          paraFixeUser$paraSig,
+                          paraFixeUser$ParaTransformY,
+                          paraFixeUser$para_surv)
   
   #initialisation
   #   paraOpt <- paras
@@ -264,15 +352,13 @@ Parametre_formative <- function(K,
   # constraining of parameters==============
   indexFixe <- indexparaFixeForIden
   
-  if (!is.null(indexparaFixeUser)) {
-    if (length(indexparaFixeUser) != length(paraFixeUser)) {
-      stop("The length of paraFixe does not correspond with the length of indexparaFixe")
-    }
-    indexFixe <- sort(unique(c(indexFixe, indexparaFixeUser)))
+  if (!is.null(indexparaFixeUser_trans)) {
+    
+    indexFixe <- sort(unique(c(indexFixe, indexparaFixeUser_trans)))
   }
   paraFixe <- rep(NA, length(posfix))
-  if (!is.null(paraFixeUser)) {
-    paraFixe[c(indexparaFixeUser)] <- paraFixeUser
+  if (!is.null(paraFixeUser_trans)) {
+    paraFixe[c(indexparaFixeUser_trans)] <- paraFixeUser_trans
   }
   paraFixe[index_paraFixe_mu0_constraint] <- rep(0, K)
   paraFixe[index_paraFixeDconstraint] <- rep(1, K)
@@ -286,7 +372,6 @@ Parametre_formative <- function(K,
     paraOpt <- paras[-indexFixe]
   }
   
-  
   return(
     list(
       para = paras_trans,
@@ -298,7 +383,8 @@ Parametre_formative <- function(K,
       knots_surv = knots_surv,
       np_surv = np_surv,
       assoc = assoc,
-      truncation = truncation
+      truncation = truncation,
+      nb_paraD=length(alpha_D_trans)
     )
   )
 }

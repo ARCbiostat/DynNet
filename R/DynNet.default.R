@@ -146,7 +146,6 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
                         data = data, outcomes = outcomes, df= data_F$df, nE = data_F$nE, np_surv = data_F$np_surv, 
                         fixed.survival.models =fixed.survival.models, interactionY.survival.models = interactionY.survival.models, 
                         nYsurv = data_F$nYsurv,names_x0=colnames(data_F$x0),names_x=colnames(data_F$x),names_z0=colnames(data_F$z0),names_z=colnames(data_F$z),names_y=colnames(data_F$Mod.MatrixY))
-  return(paras)
     }else{
     paras <- Parametre(K=K, nD = nD, vec_ncol_x0n, n_col_x, nb_RE, indexparaFixeUser = indexparaFixeUser, 
                        paraFixeUser = paraFixeUser, L = L, ncolMod.MatrixY = ncolMod.MatrixY, paras.ini=paras.ini, 
@@ -206,7 +205,7 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
   }
   
   # estimation
-  est <- DynNet.estim(K = K, nD = nD, mapping.to.LP = mapping.to.LP, data = data_F, if_link = if_link, cholesky = cholesky,
+  est <- DynNet.estim(K = K, nD = nD, mapping.to.LP = mapping.to.LP,nL=nL,mapping.to.LP2 = mapping.to.LP2, data = data_F, if_link = if_link, cholesky = cholesky,
                       DeltaT = DeltaT, MCnr = MCnr, MCnr2 = MCnr2, nmes = nmes, data_surv = Survdata,
                       paras = paras, maxiter = maxiter, nproc = nproc, epsa = epsa, epsb = epsb,
                       epsd = epsd, print.info = print.info, predict_ui = predict_ui)

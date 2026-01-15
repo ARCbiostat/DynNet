@@ -1358,7 +1358,9 @@ enter_param<-function(structural.model,
     indexparaFixeUser <- which(indparaFixeUser==1)
     Fixed.para.values <- paras[indexparaFixeUser]
     }else if(!all(indparaFixeUser==0) & formative){
-      indparaFixeUser <- list(
+      fix.weights <- rep(0,length(weights))
+      
+        indparaFixeUser <- list(
         alpha_mu0=fix.p.initlev,
         alpha_mu=fix.p.slope,
         alpha_D=fix.varcovRE,
@@ -1366,7 +1368,7 @@ enter_param<-function(structural.model,
         paraB=fix.parab,
         paraSig=fix.var.errors,
         ParaTransformY=fix.transformationY,
-        weights=weights,
+        weights=fix.weights,
         para_surv=c(fix.baseline1,
                     fix.p.X1,
                     fix.p.asso1,
@@ -1386,7 +1388,13 @@ enter_param<-function(structural.model,
     stop("at least one parameter should be fixed for identifiability purposes.")
   }
   
-  return(list("paras.ini"=paras, "Fixed.para.index"=indexparaFixeUser, "Fixed.para.values"=Fixed.para.values))
+  list_init <- list("paras.ini"=paras, "Fixed.para.index"=indexparaFixeUser, "Fixed.para.values"=Fixed.para.values)
+    
+  attr(list_init, "components") <- list(
+      structural.model=structural.model,
+      measurement.model=measurement.model
+    )
+  return(list_init)
 }
   
 

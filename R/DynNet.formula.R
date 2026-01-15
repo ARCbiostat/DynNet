@@ -384,6 +384,10 @@ DynNet <- function(structural.model, measurement.model, parameters,
   link <- measurement.model$link.functions$links
   knots <- measurement.model$link.functions$knots
   ## components of parameters initialisation
+  
+  if(is.null(attr(parameters,"components")))warning("Object of initial values was not created with the enter_param() function. Note that this is recommanded.")
+  if(!is.null(attr(parameters,"components")) & !identical(attr(parameters,"components")$structural.model,structural.model)) stop("The object of initial values was created with a different structural model specification.")
+  if(!is.null(attr(parameters,"components")) & !identical(attr(parameters,"components")$measurement.model,measurement.model)) stop("The object of initial values was created with a different measurement model specification.")
   indexparaFixeUser <- parameters$Fixed.para.index
   paraFixeUser <- parameters$Fixed.para.values
   paras.ini <- parameters$paras.ini

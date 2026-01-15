@@ -88,3 +88,46 @@ invert_vec_alpha_ij <- function(ALambda, mappingL1L2) {
   if(max_abs_residual> 1e-3) stop("Some problem in reparametrization transition matrix")
   return(AOmega)
 }
+
+
+
+
+# Map fixed Lambda-level indices (row-wise) to Omega-level indices (row-wise)
+# Args:
+#   fixed_lambda_idx : integer vector of positions in vec_row(ALambda) that are fixed
+#   nD               : number of Lambdas (rows/cols of ALambda)
+#   mappingL1L2      : Lambda-to-Omega mapping matrix (nD x nL)
+# Returns:
+#   Integer vector of positions in vec_row(AOmega) to fix
+map_fixed_lambda_to_omega <- function(fixed_lambda_idx,mappingL1L2) {
+  mappingL1L2 <- t(mappingL1L2)
+  nL <- ncol(mappingL1L2)
+  nD <- nrow(mappingL1L2)
+  # Build Omega groups per Lambda
+  groups <- lapply(seq_len(nD), function(d) which(mappingL1L2[d, ] != 0))
+  
+  # Helper: convert (i,j) to row-wise index
+  ij_to_rowvec <- function(i, j, nrow, ncol) {
+    (i - 1L) * ncol + j
+  }
+  
+  fixed_omega_idx <- integer(0)
+  
+  for (idx in fixed_lambda_idx) {
+    # Convert Lambda row-wise index to (d, d')
+    d  <- ((idx - 1L) %/% nD) + 1L
+    dp <- ((idx - 1L) %%  nD) + 1L
+    
+    Gd  <- groups[[d]]
+    Gdp <- groups[[dp]]
+    
+    # All Omega positions for this Lambda pair
+    for (i in Gd) {
+      for (j in Gdp) {
+        fixed_omega_idx <- c(fixed_omega_idx, ij_to_rowvec(i, j, nL, nL))
+      }
+    }
+  }
+  
+  sort(unique(fixed_omega_idx))
+}

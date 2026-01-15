@@ -62,14 +62,14 @@ recover_omega_cov <- function(Blambda,
   # --- extract Λ blocks by type
   BLambda_int0  <- Blambda[idx_int0, idx_int0, drop = FALSE]
   BLambda_int   <- Blambda[idx_int,  idx_int,  drop = FALSE]
-  BLambda_slope <- if(!is.null(idx_slope)) Blambda[idx_slope, idx_slope, drop = FALSE] else NULL
-  BLambda_int_slope <- if (!is.null(idx_slope)) Blambda[idx_int, idx_slope, drop = FALSE] else NULL
+  BLambda_slope <- if(length(idx_slope)>0) Blambda[idx_slope, idx_slope, drop = FALSE] else NULL
+  BLambda_int_slope <- if (length(idx_slope)>0) Blambda[idx_int, idx_slope, drop = FALSE] else NULL
   
   
   BLambda_fixed_int0  <- Blambda_fixed[idx_int0, idx_int0, drop = FALSE]
   BLambda_fixed_int   <- Blambda_fixed[idx_int,  idx_int,  drop = FALSE]
-  BLambda_fixed_slope <- if(!is.null(idx_slope)) Blambda_fixed[idx_slope, idx_slope, drop = FALSE] else NULL
-  BLambda_fixed_int_slope <- if (!is.null(idx_slope)) Blambda_fixed[idx_int, idx_slope, drop = FALSE] else NULL
+  BLambda_fixed_slope <- if(length(idx_slope)>0) Blambda_fixed[idx_slope, idx_slope, drop = FALSE] else NULL
+  BLambda_fixed_int_slope <- if (length(idx_slope)>0) Blambda_fixed[idx_int, idx_slope, drop = FALSE] else NULL
   
   # broadcast rhos
   if (length(rho_int0) == 1L) rho_int0 <- rep(rho_int0, nD)
@@ -87,22 +87,12 @@ recover_omega_cov <- function(Blambda,
     groups <- lapply(seq_len(nD), function(d) which(abs(W[d, ]) > 0))
     
     BOmega_fixed_int0  <- map_lambda_constraint_to_omega(BLambda_fixed_int0,mappingL1L2 = mappingL1L2)
-    print("int0")
-    print(BLambda_fixed_int0)
-    print(BOmega_fixed_int0)
-    BOmega_fixed_int   <- map_lambda_constraint_to_omega(BLambda_fixed_int,mappingL1L2 = mappingL1L2)
-    print("int")
-    print(BLambda_fixed_int)
-    print(BOmega_fixed_int)
+    BOmega_fixed_int  <- map_lambda_constraint_to_omega(BLambda_fixed_int,mappingL1L2 = mappingL1L2)
     BOmega_fixed_slope <- if (!is.null(BLambda_slope)) map_lambda_constraint_to_omega(BLambda_fixed_slope,mappingL1L2 = mappingL1L2) else NULL
-    print("slope")
-    print(BLambda_fixed_slope)
-    print(BOmega_fixed_slope)
+    
     # cross-type int–slope (diagonal per Ω, group-specific value)
     BOmega_fixed_int_slope <- if (!is.null(BLambda_slope)) map_lambda_constraint_to_omega(BLambda_fixed_int_slope,mappingL1L2 = mappingL1L2) else NULL
-    print("slope int")
-    print( BLambda_fixed_int_slope)
-    print(BOmega_fixed_int_slope)
+    
     
     BOmega_int0  <- matrix(0, nL, nL)
     BOmega_int   <- matrix(0, nL, nL)
@@ -300,85 +290,53 @@ recover_omega_cov <- function(Blambda,
 }
 
 
-
-
-
-# Block-wise Cholesky for BOmega with order: [all int0], then [Ω1(int), Ω1(slope), Ω2(int), Ω2(slope), ...]
-chol_by_block <- function(BOmega, nL, adjust_2x2_if_needed = TRUE) {
+# Block-wise Cholesky 
+chol_by_block <- function(BOmega, blocks, adjust_2x2_if_needed = TRUE) {
   stopifnot(is.matrix(BOmega), nrow(BOmega) == ncol(BOmega))
   p <- nrow(BOmega)
-  # Determine if we have slopes (trailing block size must be p - nL; if odd, no slopes)
-  trailing <- p - nL
-  has_slope <- (trailing %% nL == 0L) && (trailing / nL == 2L)
-  if (!has_slope) {
-    stop("This helper expects int0 followed by interleaved int,slope (2*nL trailing).")
-  }
+  if (length(blocks) != p) stop("Length of 'blocks' must equal dimension of BOmega.")
   
-  # Split blocks
-  idx_int0 <- seq_len(nL)
-  idx_trail <- (nL + 1L):p
-  B_int0 <- BOmega[idx_int0, idx_int0, drop = FALSE]
-  B_trail <- BOmega[idx_trail, idx_trail, drop = FALSE]
+  # Group indices by block ID
+  block_groups <- split(seq_len(p), blocks)
   
-  # 1) Cholesky of int0 block
-  R_int0 <- tryCatch(chol(B_int0), error = function(e) NULL)
-  if (is.null(R_int0)) {
-    stop("int0 block is not PD. Check rho_int0 and variances (or project to nearest PSD).")
-  }
-  
-  # 2) Cholesky of trailing block. If rho_int=rho_slope=0 -> block-diagonal by Ω, do per-Ω 2x2
-  # Check whether it's block diagonal by Ω (no off-diagonals between different Ω mini-blocks)
-  is_block_diag <- function(B2, nL) {
-    # each Ω contributes a 2x2 at positions: base+(0,1)
-    blk_idx <- lapply(seq_len(nL), function(l) {
-      base <- (l - 1L) * 2L
-      c(base + 1L, base + 2L)
-    })
-    # off-block entries should be ~0
-    M <- matrix(TRUE, nrow = nrow(B2), ncol = ncol(B2))
-    for (idx in blk_idx) M[idx, idx] <- FALSE
-    all(abs(B2[M]) < 1e-12)
-  }
-  
-  if (is_block_diag(B_trail, nL)) {
-    # Do Cholesky per Ω 2x2 with optional PD correction
-    R_trail <- matrix(0, nrow = trailing, ncol = trailing)
-    for (l in seq_len(nL)) {
-      base <- (l - 1L) * 2L
-      idx <- base + c(1L, 2L)
-      B2 <- B_trail[idx, idx, drop = FALSE]
-      # Optionally adjust to PD if needed
-      det2 <- B2[1,1]*B2[2,2] - B2[1,2]^2
-      if (adjust_2x2_if_needed && (B2[1,1] <= 0 || B2[2,2] <= 0 || det2 <= 0)) {
-        # enforce minimal correction: clip off-diagonal to sqrt(var1*var2) * (1 - 1e-8)
-        v1 <- max(B2[1,1], .Machine$double.eps)
-        v2 <- max(B2[2,2], .Machine$double.eps)
-        tau_max <- sqrt(v1*v2) * (1 - 1e-8)
-        tau <- max(min(B2[1,2], tau_max), -tau_max)
-        B2 <- matrix(c(v1, tau, tau, v2), 2, 2)
-      }
-      R2 <- tryCatch(chol(B2), error = function(e) NULL)
-      if (is.null(R2)) {
-        stop(sprintf("Ω-%d 2x2 block not PD even after adjustment.", l))
-      }
-      R_trail[idx, idx] <- R2
-    }
-  } else {
-    # Not block diagonal -> Cholesky the whole trailing block
-    R_trail <- tryCatch(chol(B_trail), error = function(e) NULL)
-    if (is.null(R_trail)) {
-      stop("Trailing block (int/slope) not PD. Consider adjusting rhos or projecting to nearest PSD.")
-    }
-  }
-  
-  # Assemble full R as block diagonal with zeros elsewhere
+  # Initialize result
   R <- matrix(0, nrow = p, ncol = p)
-  R[idx_int0, idx_int0] <- R_int0
-  R[idx_trail, idx_trail] <- R_trail
-  R
+  
+  # Process each block
+  for (bname in names(block_groups)) {
+    idx <- block_groups[[bname]]
+    Bsub <- BOmega[idx, idx, drop = FALSE]
+    k <- length(idx)
+    
+    if (k == 1L) {
+      # Scalar case
+      v <- Bsub[1, 1]
+      if (v <= 0) v <- .Machine$double.eps
+      R[idx, idx] <- sqrt(v)
+    } else if (k == 2L) {
+      # 2x2 case with optional PD correction
+      det2 <- Bsub[1,1]*Bsub[2,2] - Bsub[1,2]^2
+      if (adjust_2x2_if_needed && (Bsub[1,1] <= 0 || Bsub[2,2] <= 0 || det2 <= 0)) {
+        v1 <- max(Bsub[1,1], .Machine$double.eps)
+        v2 <- max(Bsub[2,2], .Machine$double.eps)
+        tau_max <- sqrt(v1*v2) * (1 - 1e-8)
+        tau <- max(min(Bsub[1,2], tau_max), -tau_max)
+        Bsub <- matrix(c(v1, tau, tau, v2), 2, 2)
+      }
+      Rsub <- tryCatch(chol(Bsub), error = function(e) NULL)
+      if (is.null(Rsub)) stop(sprintf("Block '%s' not PD even after adjustment.", bname))
+      R[idx, idx] <- Rsub
+    } else {
+      # Larger block
+      Rsub <- tryCatch(chol(Bsub), error = function(e) NULL)
+      if (is.null(Rsub)) stop(sprintf("Block '%s' not PD.", bname))
+      R[idx, idx] <- Rsub
+    }
+  }
+  
+  # to get the lower triangular matrix
+  t(R)
 }
-
-
 
 
 
