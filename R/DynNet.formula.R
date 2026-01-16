@@ -433,9 +433,10 @@ DynNet <- function(structural.model, measurement.model, parameters,
   outcome <- as.character(attr(terms(fixed_DeltaX),"variables"))[2]
   outcomes_by_LP<-strsplit(outcome,"[|]")[[1]]
   nD <- length(outcomes_by_LP) # nD: number of latent process
-  if(any(grepl("()",outcomes_by_LP))){
-    formative <- TRUE
-  }
+  
+  formative <- any(grepl("\\([^)]*[+][^)]*\\)", outcomes_by_LP))
+  
+  print(formative)
   outcomes <- NULL
   mapping.to.LP <- NULL
   mapping.to.LP2 <- NULL
@@ -464,10 +465,17 @@ DynNet <- function(structural.model, measurement.model, parameters,
       
     }
   }
+  outcomes <- sub("[()]", "", outcomes)
   if(!all(outcomes%in% colnames)) stop("outcomes must be in the data")
   K <- length(outcomes)
   all.Y<-seq(1,K)
-  nL <- ifelse(formative==T,max(mapping.to.LP2),NULL)
+  
+  if (formative) {
+    nL <- max(mapping.to.LP2)
+  } else {
+    nL <- NULL
+  }
+  
   
   fixed_DeltaX.model=strsplit(gsub("[[:space:]]","",as.character(fixed_DeltaX)),"~")[[3]]
   fixed_DeltaX.models<-strsplit(fixed_DeltaX.model,"[|]")[[1]]# chaque model d'effet fixe mais en vu de connaitre tous les pred.fixed du modele multi

@@ -31,12 +31,17 @@
 #'
 #' @export
 
-model_matrix_nL <- function(df, repeats_lp, add_suffix = TRUE) {
+model_matrix_nL <- function(df, repeats_lp, add_suffix = TRUE,mod=1) {
   
 
   nms <- colnames(df)
   # Extract LP ids per column (character, NA if no match)
-  matches <- as.numeric(gsub("[^0-9]", "", nms))
+  if(mod==1){
+    matches <- as.numeric(sub("^.*?\\.(\\d+).*", "\\1", nms))
+  }else{
+    matches <-as.numeric(gsub("[^0-9]", "", nms))
+  }
+ 
   
   unique_lp <- unique(matches)
   # Prepare output columns

@@ -226,6 +226,7 @@ DataFormat <- function(data, subject, fixed_X0.models , randoms_X0.models , fixe
   all.pred.randoms_X0 <- NULL
   all.pred.randoms_DeltaX <- NULL
   all.pred.mod_trans <- NULL
+  
   for( n in 1: nD){
     all.pred.fixed_X0 <- c(all.pred.fixed_X0,list(strsplit(fixed_X0.models[n],"[+]")[[1]]))
     all.pred.fixed_DeltaX <- c(all.pred.fixed_DeltaX,list(strsplit(fixed_DeltaX.models[n],"[+]")[[1]]))
@@ -557,6 +558,396 @@ DataFormat <- function(data, subject, fixed_X0.models , randoms_X0.models , fixe
 
 
 
+#=====================================================================================
+# create object of type list containing:
+# - design matrix for all sub-models of the  principal model 
+#====================================================================================
+#' Function to formated the data with formative structure
+#'
+#' @param data indicates the data frame containing all the variables for estimating the model
+#' @param subject indicates the name of the covariate representing the grouping structure
+#' @param fixed_X0.models fixed effects in the submodel for the baseline level of processes
+#' @param randoms_X0.models random effects in the submodel for the baseline level of processes
+#' @param fixed_DeltaX.models a two-sided linear formula object for specifying the response outcomes (one the left part of ~ symbol) 
+#' and the covariates with fixed-effects (on the right part of ~ symbol)
+#' @param randoms_DeltaX.models random effects in the submodel for change over time of latent processes
+#' @param mod_trans.model model for elements of the temporal transition matrix, which captures 
+#' the temporal influences between latent processes
+#' @param link indicates link used to transform outcome
+#' @param knots indicates position of knots used to transform outcomes
+#' @param outcomes names of the outcomes
+#' @param nD number of latent processes
+#' @param nL number of exogeneous latent processes (formative structure only)
+#' @param Time indicates the name of the covariate representing the time
+#' @param DeltaT indicates the discretization step
+#' @param zitr min and max of ordinal outcomes
+#' @param ide vector of observed values for ordinal outcomes
+#' @param Survdata dataset for survival model
+#' @param basehaz type of baseline hazard function
+#' @param fixed.survival.models specification of fixed effects for survival model (without interactions)
+#' @param interactionY.survival.models specification of interactions in survival models
+#' @param assoc specification of association between longitudinal and survival models
+#' @param truncation boolean for delayed entry
+#'
+#' @return a list
+
+DataFormat_formative <- function(data, subject, fixed_X0.models , randoms_X0.models , fixed_DeltaX.models, 
+                       randoms_DeltaX.models, mod_trans.model, link = NULL, knots = NULL, zitr = NULL, ide = NULL, 
+                       outcomes, nD,nL,mapping,mapping2, Time, Survdata = NULL, basehaz = NULL, fixed.survival.models = NULL, 
+                       interactionY.survival.models = NULL, DeltaT, assoc, truncation){
+  
+  cl <- match.call()
+  colnames<-colnames(data)
+  id_and_Time <- data[,c(subject,Time)]
+  Ni<-unique(data[,subject])
+  I <- length(Ni) # number of visit
+  K <- length(outcomes)
+  
+  mappingLP2LP1 <- pmin(table(mapping, mapping2), 1)
+  mappingLP2LP1_vec <- apply(mappingLP2LP1,2,function(x)which(x!=0))
+  
+  # Pre-traitement of data : delete lignes with no observation
+  d <- as.data.frame(data[,outcomes])
+  R <- as.numeric(apply(X = d, MARGIN = 1, FUN = is_na_vec))
+  data <-data[which(R==0),]
+  
+  #all predictor of the model==============================================================
+  colnames <- colnames(data)
+  all.pred.fixed_X0 <- NULL
+  all.pred.fixed_DeltaX <- NULL
+  all.pred.randoms_X0 <- NULL
+  all.pred.randoms_DeltaX <- NULL
+  all.pred.mod_trans <- NULL
+  
+  for( n in 1: nD){
+    all.pred.fixed_X0 <- c(all.pred.fixed_X0,list(strsplit(fixed_X0.models[n],"[+]")[[1]]))
+    all.pred.fixed_DeltaX <- c(all.pred.fixed_DeltaX,list(strsplit(fixed_DeltaX.models[n],"[+]")[[1]]))
+    all.pred.randoms_X0 <- c(all.pred.randoms_X0,list(strsplit(randoms_X0.models[n],"[+]")[[1]]))
+    all.pred.randoms_DeltaX <- c(all.pred.randoms_DeltaX,list(strsplit(randoms_DeltaX.models[n],"[+]")[[1]]))
+  }
+  #
+  all.pred.fixed_X0<-sapply(all.pred.fixed_X0,FUN = function(x)gsub("[[:space:]]","",x),simplify = FALSE)
+  all.pred.fixed_X0<-sapply(all.pred.fixed_X0,FUN = function(x)gsub("[*]",":",x),simplify = FALSE)
+  #
+  all.pred.fixed_DeltaX<-sapply(all.pred.fixed_DeltaX,FUN = function(x)gsub("[[:space:]]","",x),simplify = FALSE)
+  all.pred.fixed_DeltaX<-sapply(all.pred.fixed_DeltaX,FUN = function(x)gsub("[*]",":",x),simplify = FALSE)
+  #
+  all.pred.randoms_X0<-sapply(all.pred.randoms_X0,FUN = function(x)gsub("[[:space:]]","",x),simplify = FALSE)
+  all.pred.randoms_X0<-sapply(all.pred.randoms_X0,FUN = function(x)gsub("[*]",":",x),simplify = FALSE)
+  #
+  all.pred.randoms_DeltaX<-sapply(all.pred.randoms_DeltaX,FUN = function(x)gsub("[[:space:]]","",x),simplify = FALSE)
+  all.pred.randoms_DeltaX<-sapply(all.pred.randoms_DeltaX,FUN = function(x)gsub("[*]",":",x),simplify = FALSE)
+  #
+  all.pred.mod_trans <- c(all.pred.mod_trans,list(strsplit(mod_trans.model,"[+]")[[1]]))
+  all.pred.mod_trans<-sapply(all.pred.mod_trans,FUN = function(x)gsub("[[:space:]]","",x),simplify = FALSE)
+  all.pred.mod_trans<-sapply(all.pred.mod_trans,FUN = function(x)gsub("[*]",":",x),simplify = FALSE)
+  #ajout
+  all.preds<-unlist(unique(c(unlist(all.pred.fixed_X0), unlist(all.pred.fixed_DeltaX), 
+                             unlist(all.pred.randoms_X0), unlist(all.pred.randoms_DeltaX),
+                             all.pred.mod_trans)))
+  all.preds<-inclu_intercerpt(all.preds) # remplace 1 par "(Intercept)"
+  all.preds<-unique(unlist(sapply(all.preds,FUN=function(x)strsplit(x,":")[[1]])))
+  
+  ###all.pred_san_inter signifie all.pred_sans_intercept
+  all.preds<-all.preds[-which(all.preds %in% c("(Intercept)"))]
+  all.preds <- c(all.preds,Time)
+  all.preds <- unique(all.preds[which(all.preds %in% colnames)])  
+  
+  #Case of  unobserved components  at time t
+  m_i <-as.data.frame(table(as.factor(data[,subject])))$Freq # matrice of frequencies m_i
+  tau_is <- data[,Time]/DeltaT # vector of individuals visits vectors
+  tau_is <- as.numeric(as.character(tau_is)) # verify that all integer?
+  
+  
+  Tmax <- max(tau_is,na.rm = TRUE)
+  
+  if(!is.null(Survdata) && assoc %in%c(3,5))
+    Tmax <- max(Tmax, round(max(Survdata$Event,na.rm = TRUE)/DeltaT))#If
+  
+  tau <- 0:Tmax  
+  Y <- NULL
+  IND <- NULL
+  indY <- NULL
+  data0 <- NULL
+  
+  ###creation de data0==========
+  ## for x and z
+  all.Y<-seq(1,K)
+  for (k in 1:K)
+  {
+    dtemp <- data[,c(subject,outcomes[k],all.preds)]
+    Y <- c(Y, dtemp[,outcomes[k]])
+    IND <- c(IND, dtemp[,subject])
+    indY <- c(indY,rep(all.Y[k],nrow(dtemp)))
+    data0 <- rbind(data0, dtemp[,c(setdiff(colnames(dtemp),outcomes[k]))])
+  }
+  
+  data0<-cbind(data0,Y,indY)
+  data0<-data0[order(data0[,subject]),]
+  data0<-na.omit(data0)
+  ## for x and z
+  indY <- data0[,"indY"]
+  Y<-data0[,"Y"]
+  
+  
+  #### only for x0 and x ###############
+  xs <- as.data.frame(unique(data0[,c(subject,setdiff(all.preds,Time))])) # this does not work with time-dependent covariates
+  colnames(xs) <- c(subject,setdiff(all.preds,Time))
+  qsz <- as.data.frame(xs[rep(row.names(xs), rep(length(tau), dim(xs)[1])),])
+  colnames(qsz) <- c(subject,setdiff(all.preds,Time))
+  Times <- as.data.frame(DeltaT*rep(tau, I))
+  colnames(Times) <- Time
+  
+  if(dim(qsz)[1] != dim(Times)[1]){
+    stop("Covariates (other than time) should be time-independant.")
+  }
+  
+  data_c0 <- cbind(qsz,Times)
+  data_xzMatA_cov <-data_c0  
+  data_xzMatA_cov <-data_xzMatA_cov[order(data_xzMatA_cov[,subject], data_xzMatA_cov[,Time]),]
+  data_xzMatA_cov <- data_xzMatA_cov[!duplicated(data_xzMatA_cov),]
+  x_cov<- NULL
+  
+  for(n in 1:nL){
+    indLP_x <- rep(n, dim(data_xzMatA_cov)[1])
+    data_x_cov_i <- cbind(data_xzMatA_cov, indLP_x)
+    x_cov <- rbind(x_cov, data_x_cov_i)
+  }
+  x_cov <- x_cov[order(x_cov[,subject],x_cov[,Time]),]
+  
+  ##only for x0 #####
+  x0 <- NULL
+  nb_x0_n <- NULL
+  col_n<-list()
+  x0_cov <- x_cov[which(x_cov[,Time]==0),]
+  #
+  ##
+  indLP_x0 <- x0_cov$indLP_x
+  for(n in 1:nD){
+    r<-as.formula(paste(subject, fixed_X0.models[n], sep="~-1+"))
+    x0n<-model.matrix(r,data=x0_cov)
+    nb_x0_n <- c(nb_x0_n,ncol(x0n))
+    if(length(x0n)==0){
+      col <- paste(n,"zero",sep="")
+      x0n<-matrix(assign(col,rep(0,dim(x0_cov)[1])))
+      nb_x0_n <- c(nb_x0_n,ncol(x0n))
+    }
+    
+    colnames<-colnames(x0n)
+    colnames<-paste("LP0",n,colnames,sep=".")
+    colnames(x0n) <-colnames
+    col_n <-c(col_n,list(colnames))
+    x0<-cbind(x0,as.matrix(x0n))
+  }
+  x0 <-cbind(indLP_x0,x0)
+  ### remplissage avec les zeros
+  tous_col_x0 <-unlist(col_n)
+  for(i in 1:nrow(x0)){
+    col_i <- unlist(col_n[[mappingLP2LP1_vec[x0[i,"indLP_x0"]]]])
+    col_0<-tous_col_x0[which(!(tous_col_x0 %in% col_i))]
+    x0[i,col_0]<-0 #  passer pour optimisation
+  }
+  x0 <- as.matrix(x0)
+  colnames <- colnames(x0)
+  x0 <- as.matrix(x0[,-c(1)])
+  colnames(x0) <- colnames[-c(1)]
+  #   x0 <- as.matrix(x0)
+  
+  ##only for x #####
+  x <- NULL
+  nb_x_n <- NULL
+  col_n<-list()
+  indLP_x <- x_cov$indLP_x
+  for(n in 1:nD){
+    r<-as.formula(paste(subject, fixed_DeltaX.models[n], sep="~-1+"))
+    xn<-model.matrix(r,data=x_cov)
+    nb_x_n <- c(nb_x_n,ncol(xn))
+    if(length(xn)==0){
+      col <- paste(n,"zero",sep="")
+      xn<-matrix(assign(col,rep(0,dim(x_cov)[1])))
+      nb_x_n <- c(nb_x_n,ncol(xn))
+    }
+    colnames<-colnames(xn)
+    colnames<-paste("DeltaLP",n,colnames,sep=".")
+    colnames(xn) <-colnames
+    col_n <-c(col_n,list(colnames))
+    x<-cbind(x,as.matrix(xn))
+  }
+  x <-cbind(indLP_x,x)
+  ### filling with zeros
+  tous_col_x <-unlist(col_n)
+  for(i in 1:nrow(x)){
+    col_i <- unlist(col_n[[mappingLP2LP1_vec[x[i,"indLP_x"]]]])
+    col_0<-tous_col_x[which(!(tous_col_x %in% col_i))]
+    x[i,col_0]<-0 # z  passer pour optimisation
+  }
+  
+  x <- as.matrix(x)
+  colnames <- colnames(x)
+  x <- as.matrix(x[,-c(1)])
+  colnames(x) <- colnames[-c(1)]
+  
+  #===================================================================
+  #     construction  of matrices z0 et z========================
+  data_z_cov <- data_xzMatA_cov[, c(subject,Time)]
+  z_cov<- NULL
+  for(n in 1:nL){
+    indY_z <- rep(n, dim(data_z_cov)[1])
+    data_z_cov_i <- cbind(data_z_cov, indY_z)
+    z_cov <- rbind(z_cov, data_z_cov_i)
+  }
+  z_cov <- z_cov[order(z_cov[,subject],z_cov[,Time]),]
+  #   z_cov[,Time] <- z_cov[,Time]*DeltaT ######
+  
+  #### only for z0 ####
+  z0_cov <- z_cov[which(z_cov[,Time]==0),]
+  indY_z0 <- z0_cov$indY_z
+  z0 <- NULL
+  col_n<-list()
+  q0 <- NULL
+  nb_paraDw <- 0
+  for(n in 1:nD){
+    r<-as.formula(paste(subject,randoms_X0.models[n], sep="~-1+"))
+    z0n<-model.matrix(r,data=z0_cov)
+    if(length(z0n)==0){
+      col <- paste(n,"zero",sep="")
+      z0n<-matrix(assign(col,rep(0,dim(z0_cov)[1])))
+    }
+    colnames<-colnames(z0n)
+    colnames<-paste(n,colnames,sep="")
+    colnames(z0n) <-colnames
+    col_n <-c(col_n,list(colnames))
+    z0<-cbind(z0,z0n)
+    q0 <- c(q0,ncol(z0n))
+  }
+  
+  z0 <-cbind(indY_z0,z0)
+  ### filling with zeros
+  tous_col_z0 <-unlist(col_n)
+  for(i in 1:nrow(z0)){
+    col_i <- unlist(col_n[[mappingLP2LP1_vec[z0[i,"indY_z0"]]]])
+    col_0<-tous_col_z0[which(!(tous_col_z0 %in% col_i))]
+    z0[i,col_0]<-0 # z  passer pour optimisation
+  }
+  z0 <- z0[,-c(1)]
+  z0 <- as.matrix(z0)
+  
+  
+  #### only for z ####
+  indY_z <- z_cov$indY_z
+  z <- NULL
+  col_n<-list()
+  q <- NULL
+  nb_paraDu <- 0
+  
+  for(n in 1:nD){
+    r<-as.formula(paste(subject,randoms_DeltaX.models[n], sep="~-1+"))
+    zn<-model.matrix(r,data=z_cov)
+    if(length(zn)==0){
+      col <- paste(n,"zero",sep="")
+      zn<-matrix(assign(col,rep(0,dim(z_cov)[1])))
+    }
+    colnames<-colnames(zn)
+    colnames<-paste(n,colnames,sep="")
+    colnames(zn) <-colnames
+    col_n <-c(col_n,list(colnames))
+    z<-cbind(z,zn)
+    q <- c(q,ncol(zn))
+  }
+  
+  if(all(randoms_DeltaX.models=="-1"))
+    q <- rep(0,nL)
+  if(length(which(randoms_DeltaX.models=="-1"))>0 & length(which(randoms_DeltaX.models=="-1"))<length(randoms_DeltaX.models))
+    stop('If one dimension does not have a random slope, the other dimensions should not either.')
+  
+  z <-cbind(indY_z,z)
+  ### filling with zeros
+  tous_col_z <-unlist(col_n)
+  for(i in 1:nrow(z)){
+    col_i <- unlist(col_n[[mappingLP2LP1_vec[z[i,"indY_z"]]]])
+    col_0<-tous_col_z[which(!(tous_col_z %in% col_i))]
+    z[i,col_0]<-0 #
+  }
+  z <- z[,-c(1)]
+  z <- as.matrix(z)
+  #============================================================
+  # design matrix for transition model
+  f<-as.formula(paste(subject,mod_trans.model, sep="~"))# put subject, just to have a left side for the formula
+  modA_mat<-model.matrix(as.formula(paste(subject,mod_trans.model, sep="~")),data=data_xzMatA_cov)
+  
+  #   dim(modA_mat)
+  #   head(modA_mat)
+  #============================================================
+  #design matrix for markers transformation
+  Y <- as.matrix(data[,outcomes])
+  tr_Y <- f.link(outcomes = outcomes, Y=as.data.frame(Y), link=link, knots =knots)
+  Mod.MatrixY <- tr_Y$Mod.MatrixY
+  Mod.MatrixYprim <- tr_Y$Mod.MatrixYprim
+  knots <- tr_Y$knots
+  degree = tr_Y$degree
+  df <- tr_Y$df
+  minY <- tr_Y$minY
+  maxY <- tr_Y$maxY
+  
+  nb_RE <- sum(q0,q)
+  nb_paraD <- nb_RE*(nb_RE+1)/2
+  
+  #If joint model
+  Event <- NULL
+  StatusEvent <- NULL
+  
+  if(!is.null(Survdata)){ # Interesting for development to multi-state and interval censoring...
+    type=ifelse(length(unique(Survdata[,3]))>2, "mstate", "right")
+    surv_obj <- survival::Surv(Survdata[,2], Survdata[,3], type=type)
+    Event <- surv_obj[,1]
+    StatusEvent <- surv_obj[,2]
+    #message("check use of mstate here....")
+  }
+  
+  nE <- length(fixed.survival.models)
+  Xsurv1 <- 0
+  Xsurv2 <- 0
+  np_surv <- NULL
+  intYsurv <- 0
+  nYS <- rep(0,2)
+  
+  if(nE>0){
+    for(n in 1: nE){
+      all.pred.fixed.survival.models <- list(strsplit(fixed.survival.models[n],"[+*]")[[1]])
+      Xsurv <- as.matrix(model.matrix(as.formula(paste("",fixed.survival.models[n], sep="~")),data=Survdata)[,-1])
+      
+      if(n==1)
+        Xsurv1 <- Xsurv
+      if(n==2)
+        Xsurv2 <- Xsurv
+      np_surv <- c(np_surv, dim(Xsurv)[2] + ifelse(assoc%in%c(0, 1, 3, 4),1,2)*nL)
+    }   
+    nYS <- rep(0,nE) #to have a vector in cpp program
+    intYsurv <- NULL
+    
+    if(!is.null(interactionY.survival.models)){
+      
+      tmp_intYS <- as.vector(strsplit(interactionY.survival.models,"[|]")[[1]])
+      for(j in 1:nE){
+        intYsurv<- cbind(intYsurv, as.matrix(model.matrix(as.formula(paste("",interactionY.survival.models[j], sep="~")),data=Survdata)[,-1]))
+        
+        tmp_intYS_j<- as.vector(strsplit(tmp_intYS[j],"[+]")[[1]])
+        nYS[j]<-length(tmp_intYS_j)
+      }
+      np_surv <- np_surv + nYS*ifelse(assoc%in%c(0, 1, 3, 4),1,2)*nL
+    }else{
+      intYsurv <- 0
+    }
+  }else{
+    np_surv <-0
+  }
+  
+  return(list(nb_subject=I, nb_obs = length(na.omit(as.vector(Y))), K=K, nD = nD,nL=nL, all.preds = all.preds, id_and_Time=id_and_Time,Tmax = Tmax, m_i = m_i, Y = Y, Mod.MatrixY=Mod.MatrixY,  
+              Mod.MatrixYprim=Mod.MatrixYprim, minY = minY, maxY = maxY, knots = knots, zitr = zitr, ide = ide, df = df, degree = degree, x = x, x0 = x0, 
+              vec_ncol_x0n = nb_x0_n, z = z, z0=z0, q = q, q0 = q0, nb_paraD = nb_paraD, nb_RE=nb_RE, modA_mat = modA_mat,
+              tau = tau, tau_is = tau_is, Event = Event, StatusEvent = StatusEvent, basehaz = basehaz, nE = nE, Xsurv1 = Xsurv1, Xsurv2 = Xsurv2,
+              np_surv = np_surv, intYsurv = intYsurv, nYsurv = nYS))
+}
 
 
 

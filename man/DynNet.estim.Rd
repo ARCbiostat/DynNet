@@ -8,6 +8,8 @@ DynNet.estim(
   K,
   nD,
   mapping.to.LP,
+  nL = NULL,
+  mapping.to.LP2 = NULL,
   data,
   if_link = if_link,
   cholesky = FALSE,

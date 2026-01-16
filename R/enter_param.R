@@ -312,9 +312,7 @@ enter_param<-function(structural.model,
   outcome <- as.character(attr(terms(fixed_DeltaX),"variables"))[2]
   outcomes_by_LP<-strsplit(outcome,"[|]")[[1]]
   nD <- length(outcomes_by_LP) # nD: number of latent process
-  if(any(grepl("()",outcomes_by_LP))){
-    formative <- TRUE
-  }
+  formative <- any(grepl("\\([^)]*[+][^)]*\\)", outcomes_by_LP))
   outcomes <- NULL
   mapping.to.LP <- NULL
   mapping.to.LP2 <- NULL
@@ -345,7 +343,11 @@ enter_param<-function(structural.model,
   
   K <- length(outcomes)
   all.Y<-seq(1,K)
-  nL <- ifelse(formative==T,max(mapping.to.LP2),NULL)
+  if (formative) {
+    nL <- max(mapping.to.LP2)
+  } else {
+    nL <- NULL
+  }
   fixed_DeltaX.model=strsplit(gsub("[[:space:]]","",as.character(fixed_DeltaX)),"~")[[3]]
   fixed_DeltaX.models<-strsplit(fixed_DeltaX.model,"[|]")[[1]]# chaque model d'effet fixe mais en vu de connaitre tous les pred.fixed du modele multi
   
@@ -1009,7 +1011,7 @@ enter_param<-function(structural.model,
     p <- p + ncolMod.MatrixY
     cat("\n")
     cat("Parameters for formative part of the structural model:\n")
-    if(formative & nL!=length(weights))cat(paste0("Weights should be of length ",nL,".\n"))
+    if(formative)if(nL!=length(weights))cat(paste0("Weights should be of length ",nL,".\n"))
     
     p <- p+nL
     
@@ -1206,7 +1208,7 @@ enter_param<-function(structural.model,
   cpt1 <- cpt1 + ncolMod.MatrixY
   p <- p + ncolMod.MatrixY
   
-  if(formative & nL!=length(weights))stop(paste("Weights should be of length",nL,"not",length(weights)))
+  if(formative)if(nL!=length(weights))cat(paste0("Weights should be of length ",nL,".\n"))
   p <- p+nL
   if(formative){
     mappingLP2LP1 <- pmin(table(mapping.to.LP2, mapping.to.LP), 1)

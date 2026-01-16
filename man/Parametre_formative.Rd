@@ -63,7 +63,7 @@ outcomes and enogenous latents processes (only used for structural model)}
 
 \item{paraFixeUser}{values associated to the index of parameters to be constrained}
 
-\item{L}{number of columns of model.matrix for temporal infuences model}
+\item{L}{number of columns of model.matrix for temporal influences model}
 
 \item{paras.ini}{initial values for parameters, default values is NULL}
 

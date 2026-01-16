@@ -83,15 +83,24 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
   }
   ################### created formated data ##########################
   
+  if(!is.null(nL)){
+    data_F <- DataFormat_formative(data=data, subject = subject, fixed_X0.models = fixed_X0.models,
+                         randoms_X0.models = randoms_X0.models, fixed_DeltaX.models = fixed_DeltaX.models, 
+                         randoms_DeltaX.models = randoms_DeltaX.models, mod_trans.model = mod_trans.model, 
+                         outcomes = outcomes, nD = nD, nL=nL,mapping=mapping.to.LP,mapping2=mapping.to.LP2,link=link, knots = knots, zitr= zitr, ide = ide, 
+                         Time = Time, Survdata = Survdata, basehaz = basehaz, fixed.survival.models =fixed.survival.models, 
+                         interactionY.survival.models = interactionY.survival.models, DeltaT=DeltaT, assoc = assoc, truncation = truncation)
+  }else{
+    data_F <- DataFormat(data=data, subject = subject, fixed_X0.models = fixed_X0.models,
+                         randoms_X0.models = randoms_X0.models, fixed_DeltaX.models = fixed_DeltaX.models, 
+                         randoms_DeltaX.models = randoms_DeltaX.models, mod_trans.model = mod_trans.model, 
+                         outcomes = outcomes, nD = nD,link=link, knots = knots, zitr= zitr, ide = ide, 
+                         Time = Time, Survdata = Survdata, basehaz = basehaz, fixed.survival.models =fixed.survival.models, 
+                         interactionY.survival.models = interactionY.survival.models, DeltaT=DeltaT, assoc = assoc, truncation = truncation)
+  }
   
-  data_F <- DataFormat(data=data, subject = subject, fixed_X0.models = fixed_X0.models,
-                       randoms_X0.models = randoms_X0.models, fixed_DeltaX.models = fixed_DeltaX.models, 
-                       randoms_DeltaX.models = randoms_DeltaX.models, mod_trans.model = mod_trans.model, 
-                       outcomes = outcomes, nD = nD, link=link, knots = knots, zitr= zitr, ide = ide, 
-                       Time = Time, Survdata = Survdata, basehaz = basehaz, fixed.survival.models =fixed.survival.models, 
-                       interactionY.survival.models = interactionY.survival.models, DeltaT=DeltaT, assoc = assoc, truncation = truncation)
   
-  
+ 
   K <- data_F$K #  number of markers
   vec_ncol_x0n <- data_F$vec_ncol_x0n # number of parameters on initial level of processes
   n_col_x <- ncol(data_F$x) # number of parameters on processes slope

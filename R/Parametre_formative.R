@@ -220,6 +220,7 @@ Parametre_formative <- function(K,
     p <- p + nL
     
   #Survival
+  knots_surv <- c(0,0)
   para_surv <- paras.ini$para_surv
   
   if(!is.null(Survdata)){
@@ -302,18 +303,32 @@ Parametre_formative <- function(K,
     rho_int       = 0,
     rho_slope     = 0
   )
-  
+  nb_paraD <- nrow(alpha_D_matrix_trans[[1]])*(nrow(alpha_D_matrix_trans[[1]])+1)/2 
+  # print("nb_paraD")
+  # print(nb_paraD)
   reps <- length(row.names(alpha_D_matrix_trans[[1]])[-c(1:nL)])/nL
-  blocks <- c(1:nL,rep(apply(mappingL1L2,1,function(x)which(x!=0)),times=reps)+(nL+1))
-  chol_D_block <- chol_by_block(alpha_D_matrix_trans[[1]],blocks = blocks)
-  alpha_D_trans <- as.numeric(chol_D_block[lower.tri(chol_D_block, diag = TRUE)])
+  blocks <- c(1:nL,rep(apply(mappingLP2LP1,1,function(x)which(x!=0)),times=reps)+(nL+1))
+  #chol_D_block <- chol_by_block(alpha_D_matrix_trans[[1]],blocks = blocks) I can't do it because it is not consistent with C++
+  # print("original")
+  # print(alpha_D_matrix_trans[[1]])
+  chol_D <- t(chol(alpha_D_matrix_trans[[1]]))
+  # print("chol")
+  # print(chol_D)
+  alpha_D_trans <- as.numeric(chol_D[lower.tri(chol_D, diag = TRUE)])
+  # print("numeric version")
+  # print(alpha_D_trans)
+  #check
+  # print("check transformation")
+  # print(identical(DparChol(nrow(alpha_D_matrix_trans[[1]]),alpha_D_trans),alpha_D_matrix_trans[[1]]))
+  # print(DparChol(nrow(alpha_D_matrix_trans[[1]]),alpha_D_trans))
+  # print(alpha_D_matrix_trans[[1]])
   indexFixe_alpha_D_trans_matrix <- alpha_D_matrix_trans[[2]]
   indexFixe_alpha_D_matrix <- indexFixe_alpha_D_trans_matrix[lower.tri(indexFixe_alpha_D_trans_matrix, diag = TRUE)]
   indexFixe_alpha_D_trans <- which(indexFixe_alpha_D_matrix==1)
   
   #vec_alpha_ij
   vec_alpha_ij_trans <-as.vector(t(invert_vec_alpha_ij(matrix(vec_alpha_ij,nrow=nD,byrow = T),mappingLP2LP1_weights)))
-  indexFixe_vec_alpha_ij_trans <- if(length(indexparaFixeUser$vec_alpha_ij)>0)map_fixed_lambda_to_omega(indexparaFixeUser$vec_alpha_ij,mappingL1L2)else integer(0)
+  indexFixe_vec_alpha_ij_trans <- if(length(indexparaFixeUser$vec_alpha_ij)>0)map_fixed_lambda_to_omega(indexparaFixeUser$vec_alpha_ij,mappingLP2LP1)else integer(0)
   
   paras_trans <- c(
     alpha_mu0_trans,
@@ -326,7 +341,17 @@ Parametre_formative <- function(K,
     para_surv
   )
   
-
+  paras_trans_length <- unlist(lapply(list(
+    alpha_mu0_trans,
+    alpha_mu_trans,
+    alpha_D_trans,
+    vec_alpha_ij_trans,
+    paraB,
+    paraSig,
+    ParaTransformY,
+    para_surv
+  ), length))
+  
   indexparaFixeUser_trans <- c(indexFixe_alpha_mu0_trans,
                                indexFixe_alpha_mu_trans,
                                indexFixe_alpha_D_trans,
@@ -346,11 +371,22 @@ Parametre_formative <- function(K,
                           paraFixeUser$ParaTransformY,
                           paraFixeUser$para_surv)
   
+  
+  indexparaFixeUser_trans <- c(indexFixe_alpha_mu0_trans,
+                               indexFixe_alpha_mu_trans+paras_trans_length[1],
+                               indexFixe_alpha_D_trans+sum(paras_trans_length[1:2]),
+                               indexFixe_vec_alpha_ij_trans+sum(paras_trans_length[1:3]),
+                               indexparaFixeUser$paraB+sum(paras_trans_length[1:4]),
+                               indexparaFixeUser$paraSig+sum(paras_trans_length[1:5]),
+                               indexparaFixeUser$ParaTransformY+sum(paras_trans_length[1:6]),
+                               indexparaFixeUser$para_surv+sum(paras_trans_length[1:7]))
+  
+
   #initialisation
   #   paraOpt <- paras
-  posfix <- rep(0, length(paras)) # 0 = non fixe 1 = fixe # initialisation
+  posfix <- rep(0, length(paras_trans)) # 0 = non fixe 1 = fixe # initialisation
   # constraining of parameters==============
-  indexFixe <- indexparaFixeForIden
+  indexFixe <- indexparaFixeForIden # not used
   
   if (!is.null(indexparaFixeUser_trans)) {
     
@@ -360,17 +396,33 @@ Parametre_formative <- function(K,
   if (!is.null(paraFixeUser_trans)) {
     paraFixe[c(indexparaFixeUser_trans)] <- paraFixeUser_trans
   }
-  paraFixe[index_paraFixe_mu0_constraint] <- rep(0, K)
-  paraFixe[index_paraFixeDconstraint] <- rep(1, K)
+  
+  #not used
+  # paraFixe[index_paraFixe_mu0_constraint] <- rep(0, K)
+  # paraFixe[index_paraFixeDconstraint] <- rep(1, K)
   if (sum(!is.na(paraFixe)) == 0) {
     paraFixe = -1
-    paraOpt <- paras
+    paraOpt <- paras_trans
   } else{
     paraFixe <- paraFixe[!is.na(paraFixe)]
     posfix[indexFixe] <- 1 # fixation des paras d'indexes dans indexparaFixe
-    paras[indexFixe] <- paraFixe
-    paraOpt <- paras[-indexFixe]
+    paras_trans[indexFixe] <- paraFixe
+    paraOpt <- paras_trans[-indexFixe]
   }
+  
+  # print("Final check parametre formative")
+  # print("paras")
+  # print(paras_trans)
+  # print(length(paras_trans))
+  # 
+  # print("paraOpt")
+  # print(paraOpt)
+  # print(length(paraOpt))
+  # 
+  # print("paraFixe")
+  # print(paraFixe)
+  # print(length(paraFixe))
+  
   
   return(
     list(
@@ -384,7 +436,8 @@ Parametre_formative <- function(K,
       np_surv = np_surv,
       assoc = assoc,
       truncation = truncation,
-      nb_paraD=length(alpha_D_trans)
+      nb_paraD= nb_paraD,
+      paras_block_dim=paras_trans_length
     )
   )
 }
