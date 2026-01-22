@@ -40,105 +40,106 @@ DynNet.estim <- function(K, nD, mapping.to.LP,nL=NULL,mapping.to.LP2=NULL, data,
     ptm<-proc.time()
 if(!is.null(nL)){
   
-  temp <- Loglik_formative(K = K, nD = nD, mapping =  mapping.to.LP,nL=nL,mapping2=mapping.to.LP2, paraOpt = paras$paraOpt,  paraFixe = paras$paraFixe, posfix = paras$posfix, paras_k = paras$npara_k,
-                 sequence = as.matrix(paras$sequence), type_int = paras$type_int, ind_seq_i = paras$ind_seq_i, MCnr = MCnr, nmes = nmes,
-                 m_is = data$m_i, Mod_MatrixY = data$Mod.MatrixY, Mod_MatrixYprim = data$Mod.MatrixYprim, df=data$df,
-                 x = data$x, z = data$z, q = data$q, nb_paraD = paras$nb_paraD,
-                 x0 = data$x0, z0 = data$z0, q0 = data$q0, cholesky = cholesky,
-                 data_surv = as.matrix(data_surv), data_surv_intY = as.matrix(data$intYsurv), nYsurv = data$nYsurv, basehaz = ifelse(paras$basehaz=="Weibull", 0, 1), knots_surv = paras$knots_surv, 
-                 np_surv = paras$np_surv, survival = (data$nE>0), assoc =  paras$assoc, truncation = paras$truncation, 
-                 nE = data$nE, Xsurv1 = as.matrix(data$Xsurv1), Xsurv2 = as.matrix(data$Xsurv2),
-                 if_link = if_link, zitr = data$zitr, ide = data$ide,
-                 tau = data$tau, tau_is=data$tau_is, 
-                 modA_mat = data$modA_mat, DeltaT, ii=length(data$m_i)+10,
-                 paras_dim=paras$paras_block_dim)
-  print(temp)
+  temp <- Loglik_formative(
+    K = K,
+    nD = nD,
+    mapping =  mapping.to.LP,
+    nL = nL,
+    mapping2 = mapping.to.LP2,
+    paraOpt = paras$paraOpt,
+    paraFixe = paras$paraFixe,
+    posfix = paras$posfix,
+    paras_k = paras$npara_k,
+    sequence = as.matrix(paras$sequence),
+    type_int = paras$type_int,
+    ind_seq_i = paras$ind_seq_i,
+    MCnr = MCnr,
+    nmes = nmes,
+    m_is = data$m_i,
+    Mod_MatrixY = data$Mod.MatrixY,
+    Mod_MatrixYprim = data$Mod.MatrixYprim,
+    df = data$df,
+    x = data$x,
+    z = data$z,
+    q = data$q,
+    nb_paraD = paras$nb_paraD,
+    x0 = data$x0,
+    z0 = data$z0,
+    q0 = data$q0,
+    cholesky = cholesky,
+    data_surv = as.matrix(data_surv),
+    data_surv_intY = as.matrix(data$intYsurv),
+    nYsurv = data$nYsurv,
+    basehaz = ifelse(paras$basehaz == "Weibull", 0, 1),
+    knots_surv = paras$knots_surv,
+    np_surv = paras$np_surv,
+    survival = (data$nE > 0),
+    assoc =  paras$assoc,
+    truncation = paras$truncation,
+    nE = data$nE,
+    Xsurv1 = as.matrix(data$Xsurv1),
+    Xsurv2 = as.matrix(data$Xsurv2),
+    if_link = if_link,
+    zitr = data$zitr,
+    ide = data$ide,
+    tau = data$tau,
+    tau_is = data$tau_is,
+    modA_mat = data$modA_mat,
+    DeltaT,
+    ii = length(data$m_i) + 10,
+    paras_dim = paras$paras_block_dim
+  )
+  
 }else{
   
-  check_arma_compatibility <- function(...) {
-    args <- list(...)
-    for (name in names(args)) {
-      obj <- args[[name]]
-      cat(name, ": ")
-      
-      if (is.null(obj)) {
-        cat("NULL\n")
-      } else if ((is.numeric(obj) || is.logical(obj)) && length(obj) == 1) {
-        if (is.logical(obj)) {
-          cat("scalar bool candidate (OK)\n")
-        } else {
-          cat("scalar numeric candidate (OK)\n")
-        }
-      } else if (is.numeric(obj) && is.vector(obj)) {
-        cat("arma::vec candidate, length =", length(obj), "\n")
-      } else if (is.numeric(obj) && is.matrix(obj)) {
-        cat("arma::mat candidate, dim =", paste(dim(obj), collapse = " x "), "\n")
-      } else {
-        cat("WARNING: unexpected type =", class(obj), "\n")
-      }
-    }
-  }
   
- 
-  # # Updated compatibility check based on Loglik call
-  # check_arma_compatibility(
-  #   K = K,
-  #   nD = nD,
-  #   mapping = mapping.to.LP,            
-  #   paraOpt = as.numeric(paras$paraOpt),
-  #   paraFixe = paras$paraFixe,
-  #   posfix = paras$posfix,
-  #   paras_k = paras$npara_k,
-  #   sequence = as.matrix(paras$sequence),
-  #   type_int = paras$type_int,
-  #   ind_seq_i = paras$ind_seq_i,
-  #   MCnr = MCnr,
-  #   nmes = nmes,
-  #   m_is = data$m_i,
-  #   Mod_MatrixY = data$Mod.MatrixY,
-  #   Mod_MatrixYprim = data$Mod.MatrixYprim,
-  #   df = data$df,
-  #   x = as.matrix(data$x),
-  #   z = as.matrix(data$z),
-  #   q = data$q,
-  #   nb_paraD = data$nb_paraD,
-  #   x0 = as.matrix(data$x0),
-  #   z0 = as.matrix(data$z0),
-  #   q0 = data$q0,
-  #   cholesky = cholesky,                          # logical -> bool
-  #   data_surv = as.matrix(data_surv),
-  #   data_surv_intY = as.matrix(data$intYsurv),
-  #   nYsurv = data$nYsurv,
-  #   basehaz = ifelse(paras$basehaz == "Weibull", 0, 1),
-  #   knots_surv = paras$knots_surv,
-  #   np_surv = paras$np_surv,
-  #   survival = (data$nE > 0),                     # logical -> bool
-  #   assoc = paras$assoc,
-  #   truncation = paras$truncation,                # logical -> bool
-  #   nE = data$nE,
-  #   Xsurv1 = as.matrix(data$Xsurv1),
-  #   Xsurv2 = as.matrix(data$Xsurv2),
-  #   if_link = if_link,
-  #   zitr = data$zitr,
-  #   ide = data$ide,
-  #   tau = data$tau,
-  #   tau_is = data$tau_is,
-  #   modA_mat = data$modA_mat,
-  #   DeltaT = DeltaT,
-  #   ii = length(data$m_i) + 10
-  # )
   
-  temp <- Loglik(K = K, nD = nD, mapping =  mapping.to.LP, paraOpt = paras$paraOpt,  paraFixe = paras$paraFixe, posfix = paras$posfix, paras_k = paras$npara_k,
-                 sequence = as.matrix(paras$sequence), type_int = paras$type_int, ind_seq_i = paras$ind_seq_i, MCnr = MCnr, nmes = nmes,
-                 m_is = data$m_i, Mod_MatrixY = data$Mod.MatrixY, Mod_MatrixYprim = data$Mod.MatrixYprim, df=data$df,
-                 x = data$x, z = data$z, q = data$q, nb_paraD = data$nb_paraD,
-                 x0 = data$x0, z0 = data$z0, q0 = data$q0, cholesky = cholesky,
-                 data_surv = as.matrix(data_surv), data_surv_intY = as.matrix(data$intYsurv), nYsurv = data$nYsurv, basehaz = ifelse(paras$basehaz=="Weibull", 0, 1), knots_surv = paras$knots_surv, 
-                 np_surv = paras$np_surv, survival = (data$nE>0), assoc =  paras$assoc, truncation = paras$truncation, 
-                 nE = data$nE, Xsurv1 = as.matrix(data$Xsurv1), Xsurv2 = as.matrix(data$Xsurv2),
-                 if_link = if_link, zitr = data$zitr, ide = data$ide,
-                 tau = data$tau, tau_is=data$tau_is, 
-                 modA_mat = data$modA_mat, DeltaT, ii=length(data$m_i)+10)
+  temp <- Loglik(
+    K = K,
+    nD = nD,
+    mapping =  mapping.to.LP,
+    paraOpt = paras$paraOpt,
+    paraFixe = paras$paraFixe,
+    posfix = paras$posfix,
+    paras_k = paras$npara_k,
+    sequence = as.matrix(paras$sequence),
+    type_int = paras$type_int,
+    ind_seq_i = paras$ind_seq_i,
+    MCnr = MCnr,
+    nmes = nmes,
+    m_is = data$m_i,
+    Mod_MatrixY = data$Mod.MatrixY,
+    Mod_MatrixYprim = data$Mod.MatrixYprim,
+    df = data$df,
+    x = data$x,
+    z = data$z,
+    q = data$q,
+    nb_paraD = data$nb_paraD,
+    x0 = data$x0,
+    z0 = data$z0,
+    q0 = data$q0,
+    cholesky = cholesky,
+    data_surv = as.matrix(data_surv),
+    data_surv_intY = as.matrix(data$intYsurv),
+    nYsurv = data$nYsurv,
+    basehaz = ifelse(paras$basehaz == "Weibull", 0, 1),
+    knots_surv = paras$knots_surv,
+    np_surv = paras$np_surv,
+    survival = (data$nE > 0),
+    assoc =  paras$assoc,
+    truncation = paras$truncation,
+    nE = data$nE,
+    Xsurv1 = as.matrix(data$Xsurv1),
+    Xsurv2 = as.matrix(data$Xsurv2),
+    if_link = if_link,
+    zitr = data$zitr,
+    ide = data$ide,
+    tau = data$tau,
+    tau_is = data$tau_is,
+    modA_mat = data$modA_mat,
+    DeltaT,
+    ii = length(data$m_i) + 10
+  )
 }
     
 
@@ -184,22 +185,42 @@ if(!is.null(nL)){
     #source("/Users/anais/Documents/2019 Postdoc Bordeaux/code/R/MLM/deriva_AR.R")
 
       ptm<-proc.time()#marqLevAlg::marqLevAlg
-
-      temp <- try(marqLevAlg::marqLevAlg(b = paras$paraOpt, fn = Loglik, nproc = nproc, .packages = NULL, epsa=epsa, epsb=epsb, epsd=epsd,
-                                         maxiter=maxiter, print.info = print.info,  minimize = FALSE,
-                                         DeltaT=DeltaT, paraFixe = paras$paraFixe, posfix = paras$posfix,
-                                         paras_k = paras$npara_k, 
-                                         sequence = as.matrix(paras$sequence), type_int = paras$type_int, ind_seq_i = paras$ind_seq_i,  MCnr = MCnr, nmes = nmes,
-                                         K = K, nD = nD, mapping =  mapping.to.LP, m_is = data$m_i, if_link = if_link, zitr = data$zitr, ide = data$ide, 
-                                         Mod_MatrixY = data$Mod.MatrixY, Mod_MatrixYprim = data$Mod.MatrixYprim, df=data$df,
-                                         x = data$x, z = data$z, q = data$q, nb_paraD = data$nb_paraD,
-                                         x0 = data$x0, z0 = data$z0, q0 = data$q0, cholesky = cholesky, tau = data$tau, tau_is=data$tau_is,
-                                         modA_mat = data$modA_mat, data_surv = as.matrix(data_surv), data_surv_intY = as.matrix(data$intYsurv), nYsurv = data$nYsurv, basehaz = ifelse(paras$basehaz=="Weibull", 0, 1), knots_surv = paras$knots_surv, 
-                                         np_surv = paras$np_surv, survival = (data$nE>0), assoc =  paras$assoc, truncation = paras$truncation, 
-                                         nE = data$nE, Xsurv1 = as.matrix(data$Xsurv1), Xsurv2 = as.matrix(data$Xsurv2), 
-                                         clustertype=cluster_type, ii=length(data$m_i)+10)
-                  ,silent = FALSE)
       
+      if(!is.null(nL)){
+        temp <- try(marqLevAlg::marqLevAlg(b = paras$paraOpt, fn = Loglik_formative, nproc = nproc, .packages = NULL, epsa=epsa, epsb=epsb, epsd=epsd,
+                                           maxiter=maxiter, print.info = print.info,  minimize = FALSE,
+                                           DeltaT=DeltaT, paraFixe = paras$paraFixe, posfix = paras$posfix,
+                                           paras_k = paras$npara_k, 
+                                           sequence = as.matrix(paras$sequence), type_int = paras$type_int, ind_seq_i = paras$ind_seq_i,  MCnr = MCnr, nmes = nmes,
+                                           K = K, nD = nD, mapping =  mapping.to.LP,nL=nL, mapping2=mapping.to.LP2, m_is = data$m_i, if_link = if_link, zitr = data$zitr, ide = data$ide, 
+                                           Mod_MatrixY = data$Mod.MatrixY, Mod_MatrixYprim = data$Mod.MatrixYprim, df=data$df,
+                                           x = data$x, z = data$z, q = data$q, nb_paraD = paras$nb_paraD,
+                                           x0 = data$x0, z0 = data$z0, q0 = data$q0, cholesky = cholesky, tau = data$tau, tau_is=data$tau_is,
+                                           modA_mat = data$modA_mat, data_surv = as.matrix(data_surv), data_surv_intY = as.matrix(data$intYsurv), nYsurv = data$nYsurv, basehaz = ifelse(paras$basehaz=="Weibull", 0, 1), knots_surv = paras$knots_surv, 
+                                           np_surv = paras$np_surv, survival = (data$nE>0), assoc =  paras$assoc, truncation = paras$truncation, 
+                                           nE = data$nE, Xsurv1 = as.matrix(data$Xsurv1), Xsurv2 = as.matrix(data$Xsurv2), 
+                                           clustertype=cluster_type, ii=length(data$m_i)+10,
+                                           paras_dim=paras$paras_block_dim)
+                    ,silent = FALSE)
+        return(temp)
+        temp <- get_opt_formative(temp,paras$paras_block_dim,mapping.to.LP,mapping.to.LP2)
+      }else{
+        temp <- try(marqLevAlg::marqLevAlg(b = paras$paraOpt, fn = Loglik, nproc = nproc, .packages = NULL, epsa=epsa, epsb=epsb, epsd=epsd,
+                                           maxiter=maxiter, print.info = print.info,  minimize = FALSE,
+                                           DeltaT=DeltaT, paraFixe = paras$paraFixe, posfix = paras$posfix,
+                                           paras_k = paras$npara_k, 
+                                           sequence = as.matrix(paras$sequence), type_int = paras$type_int, ind_seq_i = paras$ind_seq_i,  MCnr = MCnr, nmes = nmes,
+                                           K = K, nD = nD, mapping =  mapping.to.LP, m_is = data$m_i, if_link = if_link, zitr = data$zitr, ide = data$ide, 
+                                           Mod_MatrixY = data$Mod.MatrixY, Mod_MatrixYprim = data$Mod.MatrixYprim, df=data$df,
+                                           x = data$x, z = data$z, q = data$q, nb_paraD = data$nb_paraD,
+                                           x0 = data$x0, z0 = data$z0, q0 = data$q0, cholesky = cholesky, tau = data$tau, tau_is=data$tau_is,
+                                           modA_mat = data$modA_mat, data_surv = as.matrix(data_surv), data_surv_intY = as.matrix(data$intYsurv), nYsurv = data$nYsurv, basehaz = ifelse(paras$basehaz=="Weibull", 0, 1), knots_surv = paras$knots_surv, 
+                                           np_surv = paras$np_surv, survival = (data$nE>0), assoc =  paras$assoc, truncation = paras$truncation, 
+                                           nE = data$nE, Xsurv1 = as.matrix(data$Xsurv1), Xsurv2 = as.matrix(data$Xsurv2), 
+                                           clustertype=cluster_type, ii=length(data$m_i)+10)
+                    ,silent = FALSE)
+      }
+
       time=proc.time()-ptm
       h=floor(time[3]/3600)
       m=floor((time[3]-h*3600)/60)
@@ -391,4 +412,29 @@ if(!is.null(nL)){
     est$LouisV <- NULL
   }
   est
+}
+
+
+check_arma_compatibility <- function(...) {
+  args <- list(...)
+  for (name in names(args)) {
+    obj <- args[[name]]
+    cat(name, ": ")
+    
+    if (is.null(obj)) {
+      cat("NULL\n")
+    } else if ((is.numeric(obj) || is.logical(obj)) && length(obj) == 1) {
+      if (is.logical(obj)) {
+        cat("scalar bool candidate (OK)\n")
+      } else {
+        cat("scalar numeric candidate (OK)\n")
+      }
+    } else if (is.numeric(obj) && is.vector(obj)) {
+      cat("arma::vec candidate, length =", length(obj), "\n")
+    } else if (is.numeric(obj) && is.matrix(obj)) {
+      cat("arma::mat candidate, dim =", paste(dim(obj), collapse = " x "), "\n")
+    } else {
+      cat("WARNING: unexpected type =", class(obj), "\n")
+    }
+  }
 }
