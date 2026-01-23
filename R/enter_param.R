@@ -70,7 +70,6 @@
 #' @param transformationY initial values for the marker-specific transformation functions (see links in DynNet help)
 #' @param fix.transformationY indicator if the parameters \code{transformationY} are fixed.
 #' @param baseline1 initial values for the baseline hazard function in the time-to-event model (in the survival setting) or in the first transition model (in the competing risks setting).
-#' @param weights weights of exogenous latent processes (only used for formative structural model)
 #' @param fix.baseline1 indicator if the parameters \code{baseline1} are fixed.
 #' @param p.X1 initial values for the covariate fixed effects (excluding association and latent-process interaction parameters)in the time-to-event model (in the survival setting) or in the first transition model (in the competing risks setting).
 #' @param fix.p.X1 indicator if the parameters \code{p.X1} are fixed.
@@ -211,7 +210,6 @@ enter_param<-function(structural.model,
                       fix.var.errors=rep(0,length(var.errors)),
                       transformationY,
                       fix.transformationY=rep(0,length(transformationY)),
-                      weights=NULL,
                       baseline1=NULL,
                       fix.baseline1=rep(0,length(baseline1)),
                       p.X1=NULL,
@@ -1009,11 +1007,6 @@ enter_param<-function(structural.model,
     
     cpt1 <- cpt1 + ncolMod.MatrixY
     p <- p + ncolMod.MatrixY
-    cat("\n")
-    cat("Parameters for formative part of the structural model:\n")
-    if(formative)if(nL!=length(weights))cat(paste0("Weights should be of length ",nL,".\n"))
-    
-    p <- p+nL
     
     
     #Survival
@@ -1208,26 +1201,7 @@ enter_param<-function(structural.model,
   cpt1 <- cpt1 + ncolMod.MatrixY
   p <- p + ncolMod.MatrixY
   
-  if(formative)if(nL!=length(weights))cat(paste0("Weights should be of length ",nL,".\n"))
-  p <- p+nL
-  if(formative){
-    mappingLP2LP1 <- pmin(table(mapping.to.LP2, mapping.to.LP), 1)
-    mappingLP2LP1_weights <- mappingLP2LP1 * weights
-    sum_w <- apply(mappingLP2LP1_weights, 2, sum)
-    end_zero <- apply(mappingLP2LP1_weights, 2, function(x)
-      any(x == 1)) & apply(mappingLP2LP1, 2, sum) > 1
-    if (any(sum_w != 1))
-      stop(
-        "Initial values for the weights of the formative part of the structural model need to sum to 1 within each endogenous latent process"
-      )
-    if (any(end_zero == TRUE))
-      stop(
-        "Some initial values for the weights reduce formative structure of the model by putting weight=1"
-      )
-    
-  }
-  
-  
+
   #Survival
   para_surv <- NULL
   para_basehaz <- NULL
@@ -1316,7 +1290,7 @@ enter_param<-function(structural.model,
   
   
   #final vector of initial parameters
-  paras <- c(alpha_mu0, alpha_mu, alpha_D, vec_alpha_ij,  paraB, paraSig, ParaTransformY,weights)
+  paras <- c(alpha_mu0, alpha_mu, alpha_D, vec_alpha_ij,  paraB, paraSig, ParaTransformY)
   if(formative){
     paras <- list(alpha_mu0=alpha_mu0, 
                   alpha_mu=alpha_mu, 
@@ -1325,7 +1299,6 @@ enter_param<-function(structural.model,
                   paraB=paraB, 
                   paraSig=paraSig, 
                   ParaTransformY=ParaTransformY,
-                  weights=weights,
                   para_surv=para_surv)
   }
   t1 <- 0
@@ -1360,7 +1333,7 @@ enter_param<-function(structural.model,
     indexparaFixeUser <- which(indparaFixeUser==1)
     Fixed.para.values <- paras[indexparaFixeUser]
     }else if(!all(indparaFixeUser==0) & formative){
-      fix.weights <- rep(0,length(weights))
+     
       
         indparaFixeUser <- list(
         alpha_mu0=fix.p.initlev,
@@ -1370,7 +1343,6 @@ enter_param<-function(structural.model,
         paraB=fix.parab,
         paraSig=fix.var.errors,
         ParaTransformY=fix.transformationY,
-        weights=fix.weights,
         para_surv=c(fix.baseline1,
                     fix.p.X1,
                     fix.p.asso1,

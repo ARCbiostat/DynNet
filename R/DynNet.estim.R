@@ -202,8 +202,8 @@ if(!is.null(nL)){
                                            clustertype=cluster_type, ii=length(data$m_i)+10,
                                            paras_dim=paras$paras_block_dim)
                     ,silent = FALSE)
-        return(temp)
-        temp <- get_opt_formative(temp,paras$paras_block_dim,mapping.to.LP,mapping.to.LP2)
+      
+        temp$b <-  get_opt_formative(temp$b, paras$paras_block_dim, mapping=mapping.to.LP, mapping2=mapping.to.LP2,nRE=paras$nRE)
       }else{
         temp <- try(marqLevAlg::marqLevAlg(b = paras$paraOpt, fn = Loglik, nproc = nproc, .packages = NULL, epsa=epsa, epsb=epsb, epsd=epsd,
                                            maxiter=maxiter, print.info = print.info,  minimize = FALSE,

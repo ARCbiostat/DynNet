@@ -198,26 +198,15 @@ Parametre_formative <- function(K,
     
     
     # Weigths for formative structural model
-    para_weights <- paras.ini$weights
+    
     mappingLP2LP1 <- pmin(table(mapping.to.LP2, mapping.to.LP), 1)
-    mappingLP2LP1_weights <- mappingLP2LP1 * para_weights
-    sum_w <- apply(mappingLP2LP1_weights, 2, sum)
-    end_zero <- apply(mappingLP2LP1_weights, 2, function(x)
-      any(x == 1)) & apply(mappingLP2LP1, 2, sum) > 1
-    if (any(sum_w != 1))
-      stop(
-        "Initial values for the weights of the formative part of the structural model need to sum to 1 within each endogenous latent process"
-      )
-    if (any(end_zero == TRUE))
-      stop(
-        "Some initial values for the weights reduce formative structure of the model by putting weight=1"
-      )
-    
     map_p$weights <- rep(as.integer(colnames(mappingLP2LP1)), times =
-                                     as.numeric(apply(mappingLP2LP1, 2, sum)))
-    names(map_p$weights) <- paste0("para_weights", 1:length(para_weights))
+                           as.numeric(apply(mappingLP2LP1, 2, sum)))
+    names(map_p$weights) <- paste0("para_weights", 1:length(map_p$weights))
+    para_weights <- unlist(tapply(rep(1,nL), map_p$weights, function(x) x / sum(x)))
     
-    p <- p + nL
+    mappingLP2LP1_weights <- mappingLP2LP1 * para_weights
+    
     
   #Survival
   knots_surv <- c(0,0)
@@ -254,7 +243,7 @@ Parametre_formative <- function(K,
  
   
   if(!is.null(paras.ini)){
-    if( length(paras) != p ){
+    if( length(paras) != (p+nL) ){
       stop("The length of paras.ini is not correct.")
   }}
   
@@ -437,6 +426,7 @@ Parametre_formative <- function(K,
       assoc = assoc,
       truncation = truncation,
       nb_paraD= nb_paraD,
+      nRE=nrow(alpha_D_matrix_trans[[1]]),
       paras_block_dim=paras_trans_length
     )
   )
