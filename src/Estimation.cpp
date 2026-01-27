@@ -2208,7 +2208,7 @@ double Loglik(int K, int nD, arma::vec& mapping, arma::vec& paraOpt, arma::vec& 
               arma::vec& paras_k, arma::mat& sequence, int type_int, arma::vec& ind_seq_i, int MCnr,  arma::vec& nmes, arma::vec& m_is,
               arma::mat& Mod_MatrixY, arma::mat& Mod_MatrixYprim, arma::vec& df, arma::mat& x,
               arma::mat& z, arma::vec& q, int nb_paraD, arma::mat& x0, arma::mat& z0,
-              arma::vec& q0, bool cholesky,
+              arma::vec& q0, int varcov_format,
               arma::mat& data_surv, arma::mat& data_surv_intY, arma::vec& nYsurv,
               int basehaz, arma::vec& knots_surv, arma::vec& np_surv, bool survival, int assoc, bool truncation,
               int nE, arma::mat& Xsurv1, arma::mat& Xsurv2,
@@ -2305,7 +2305,7 @@ double Loglik(int K, int nD, arma::vec& mapping, arma::vec& paraOpt, arma::vec& 
   // alpha_D contains initial parameters (corr)
   mat prmea;
 
-  if(cholesky==false){
+  if(varcov_format==2){
     int iii=0;
     prmea = zeros(nb_RE, nb_RE); //triangular inf
     for(int i=0; i<nb_RE;i++){
@@ -2362,7 +2362,9 @@ double Loglik(int K, int nD, arma::vec& mapping, arma::vec& paraOpt, arma::vec& 
     // //cout << det(matD)<<" matD "<<matD;
     // cout << " matD "<<matD;
     
-  }else{
+  }
+  
+  if(varcov_format==1){
     matD = DparChol(nb_RE, alpha_D);
   }
        
@@ -2599,7 +2601,7 @@ double Loglik(int K, int nD, arma::vec& mapping, arma::vec& paraOpt, arma::vec& 
  //' @param z0 model.matrix for baseline's random effects submodel
  //' @param z model.matrix for change's random effects submodel
  //' @param q0 a vector of number of random effects on each initial latent process level
- //' @param cholesky logical indicating if the variance covariance matrix is parameterized using the cholesky (TRUE, by default) or the correlation (FALSE)
+ //' @param varcov_format integer indicating how the variance covariance matrix is parameterized: "cholesky" (by default),"correlation" or "block"
  //' @param q a vector of number of random effects on each change latent process over time
  //' @param if_link indicates if non linear link is used to transform an outcome
  //' @param tau a vector of integers indicating times (including maximum time)
@@ -2634,7 +2636,7 @@ double Loglik2(int K, int nD, arma::vec& mapping, arma::vec& paraOpt, arma::vec&
               arma::vec& paras_k, arma::mat& sequence, int type_int, arma::vec& ind_seq_i, int MCnr,  arma::vec& nmes, arma::vec& m_is,
               arma::mat& Mod_MatrixY, arma::mat& Mod_MatrixYprim, arma::vec& df, arma::mat& x,
               arma::mat& z, arma::vec& q, int nb_paraD, arma::mat& x0, arma::mat& z0,
-              arma::vec& q0, bool cholesky,
+              arma::vec& q0, int varcov_format,
               arma::mat& data_surv, arma::mat& data_surv_intY, arma::vec& nYsurv,
               int basehaz, arma::vec& knots_surv, arma::vec& np_surv, bool survival, int assoc, bool truncation,
               int nE, arma::mat& Xsurv1, arma::mat& Xsurv2,
@@ -2730,7 +2732,7 @@ double Loglik2(int K, int nD, arma::vec& mapping, arma::vec& paraOpt, arma::vec&
   // alpha_D contains initial parameters (corr)
   mat prmea;
   
-  if(cholesky==false){
+  if(varcov_format==2){
     int iii=0;
     prmea = zeros(nb_RE, nb_RE); //triangular inf
     for(int i=0; i<nb_RE;i++){

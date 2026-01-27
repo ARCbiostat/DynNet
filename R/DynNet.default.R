@@ -47,7 +47,7 @@
 #' @param sequence quasi-random of QMC
 #' @param ind_seq_i QMC
 #' @param nmes number of repeated measurements
-#' @param cholesky logical indicating if the variance covariance matrix is parameterized using the cholesky (TRUE, by default) or the correlation (FALSE)
+#' @param varcovRE.format character indicating how the variance covariance matrix is parameterized: "cholesky" (by default),"correlation" or "block"
 #' @param zitr min and max of ordinal outcomes
 #' @param ide vector of observed values for ordinal outcomes
 #' @param TimeDiscretization a boolean indicating if the initial time has to be discretized (TRUE by default). When setting to FALSE, it allows to avoid discretization when running univariate model during parameter initialization.
@@ -65,7 +65,7 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
                            DeltaT, outcomes, nD, mapping.to.LP,nL,mapping.to.LP2, link, knots=NULL, subject, data, Time, 
                            Survdata = NULL, basehaz = NULL, knots_surv=NULL, assoc = 0, truncation = FALSE, fixed.survival.models = NULL, 
                            interactionY.survival.models = NULL, predict_ui = NULL, 
-                           makepred, MCnr_pred, MCnr, MCnr2, type_int = NULL, sequence = NULL, ind_seq_i = NULL, nmes = NULL, cholesky= FALSE,
+                           makepred, MCnr_pred, MCnr, MCnr2, type_int = NULL, sequence = NULL, ind_seq_i = NULL, nmes = NULL, varcovRE.format="cholesky",
                            paras.ini= NULL, indexparaFixeUser, paraFixeUser, maxiter, zitr, ide, univarmaxiter, nproc = 1, 
                            epsa =0.0001, epsb = 0.0001, epsd= 0.001, print.info = FALSE, TimeDiscretization = TRUE, 
                            Tentry = NULL, Event = NULL, StatusEvent = NULL, ...)
@@ -162,7 +162,7 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
                        link = link, npara_k = npara_k, 
                        Survdata = Survdata, basehaz = basehaz, knots_surv = knots_surv, assoc = assoc, truncation = truncation,
                        data = data, outcomes = outcomes, df= data_F$df, nE = data_F$nE, np_surv = data_F$np_surv, 
-                       fixed.survival.models =fixed.survival.models, interactionY.survival.models = interactionY.survival.models, nYsurv = data_F$nYsurv)
+                       fixed.survival.models =fixed.survival.models, interactionY.survival.models = interactionY.survival.models, nYsurv = data_F$nYsurv,varcovRE.format = varcovRE.format)
   }
   if_link <- rep(0,K)
   for(k in 1:K){
@@ -215,7 +215,7 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
   }
   
   # estimation
-  est <- DynNet.estim(K = K, nD = nD, mapping.to.LP = mapping.to.LP,nL=nL,mapping.to.LP2 = mapping.to.LP2, data = data_F, if_link = if_link, cholesky = cholesky,
+  est <- DynNet.estim(K = K, nD = nD, mapping.to.LP = mapping.to.LP,nL=nL,mapping.to.LP2 = mapping.to.LP2, data = data_F, if_link = if_link, varcovRE.format = varcovRE.format,
                       DeltaT = DeltaT, MCnr = MCnr, MCnr2 = MCnr2, nmes = nmes, data_surv = Survdata,
                       paras = paras, maxiter = maxiter, nproc = nproc, epsa = epsa, epsb = epsb,
                       epsd = epsd, print.info = print.info, predict_ui = predict_ui)
@@ -248,7 +248,7 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
 
     Predict <- pred_bis(K = K, nD = nD, mapping = mapping.to.LP, paras = res$coefficients,
                     m_is= data_F$m_i, Mod_MatrixY = data_F$Mod.MatrixY, df= data_F$df,
-                    x = data_F$x, z = data_F$z, q = data_F$q, cholesky = cholesky, nb_paraD = data_F$nb_paraD, x0 = data_F$x0, z0 = data_F$z0,
+                    x = data_F$x, z = data_F$z, q = data_F$q, varcovRE.format=varcovRE.format, nb_paraD = data_F$nb_paraD, x0 = data_F$x0, z0 = data_F$z0,
                     q0 = data_F$q0, if_link = if_link, tau = data_F$tau,
                     tau_is=data_F$tau_is, modA_mat = data_F$modA_mat, DeltaT=DeltaT, 
                     MCnr = MCnr_pred, minY=data_F$minY, maxY=data_F$maxY, knots=data_F$knots, data_F$degree, epsPred = 1.e-9)
@@ -298,10 +298,14 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
   L <- NULL
   #   for(i in 1:K){
   npRE <- data_F$nb_paraD
-  if(cholesky){
+  if(varcovRE.format=="cholesky"){
     L <- paste("Chol.", 1:npRE,sep="")
-  }else{
+  }
+  if(varcovRE.format=="cholesky"){
     L <- paste("Rho.", 1:npRE,sep="")
+  }
+  if(varcovRE.format=="block"){
+    stop("Still to develop")
   }
   
   # colname  measurement error
@@ -395,12 +399,13 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
   
   nb_RE <- data_F$q0+data_F$q
   
-  if(cholesky){
+  if(varcovRE.format=="cholesky"){
     chol <- matrix(0, nb_RE*nD, nb_RE*nD)
     chol[upper.tri(chol, diag = T)] <- res$coefficients[grep("Chol", res$colnames)]
     res$varcov <- t(chol)%*%chol
     
-  }else{
+  }
+  if(varcovRE.format=="correlation"){
     prmea <- matrix(0, nb_RE*nD, nb_RE*nD)
     prmea[lower.tri(prmea,diag=TRUE)] <- res$coefficients[grep("Rho", res$colnames)]
     prmea <- t(prmea)
@@ -413,6 +418,9 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
     covea <- sweep(corr,1,sea,"*")
     covea <- sweep(covea,2,sea,"*")
     res$varcov <- covea
+  }
+  if(varcovRE.format=="block"){
+    stop("still to develop")
   }
   
   res$coefficients <- as.matrix(res$coefficients)

@@ -15,7 +15,7 @@
 #' @param epsb threshold for the convergence criterion on the likelihood, default value is 1.e-4
 #' @param epsd threshold for the convergence criterion on the derivatives, default value is 1.e-3
 #' @param print.info to print information during the liklihood optimization, default value is FALSE
-#' @param cholesky logical indicating if the variance covariance matrix is parameterized using the cholesky (TRUE, by default) or the correlation (FALSE)
+#' @param varcovRE.format character indicating how the variance covariance matrix is parameterized: "cholesky" (by default),"correlation" or "block"
 #' @param MCnr number of QMC replicates to compute the integral over random effects
 #' @param MCnr2 number of QMC replicates to compute the integral over random effects in the Louis Variance
 #' @param nmes number of repeated measurements
@@ -25,7 +25,7 @@
 #' @return DynNet object
 #' 
 #' @import marqLevAlg randtoolbox foreach doParallel
-DynNet.estim <- function(K, nD, mapping.to.LP,nL=NULL,mapping.to.LP2=NULL, data, if_link = if_link, cholesky = FALSE, DeltaT=1.0, MCnr = NULL, MCnr2=NULL, nmes = NULL, data_surv = NULL, paras, 
+DynNet.estim <- function(K, nD, mapping.to.LP,nL=NULL,mapping.to.LP2=NULL, data, if_link = if_link, varcovRE.format="cholesky", DeltaT=1.0, MCnr = NULL, MCnr2=NULL, nmes = NULL, data_surv = NULL, paras, 
                           maxiter = 500, nproc = 1, epsa =0.0001, epsb = 0.0001,epsd= 0.001, print.info = FALSE, predict_ui = FALSE){
   cl <- match.call()
   #  non parall Optimisation 
@@ -34,6 +34,17 @@ DynNet.estim <- function(K, nD, mapping.to.LP,nL=NULL,mapping.to.LP2=NULL, data,
   debug=0
   
   cluster_type <- ifelse(.Platform$OS.type == "unix", "FORK", "PSOCK")
+  if(varcovRE.format=="cholesky"){
+    varcov_format <- 1
+  }
+  
+  if(varcovRE.format=="correlation"){
+    varcov_format <- 2
+  }
+  
+  if(varcovRE.format=="block"){
+    varcov_format <- 3
+  }
 
   if(debug==1 || maxiter == -1){
     
@@ -66,7 +77,7 @@ if(!is.null(nL)){
     x0 = data$x0,
     z0 = data$z0,
     q0 = data$q0,
-    cholesky = cholesky,
+    varcov_format=varcov_format,
     data_surv = as.matrix(data_surv),
     data_surv_intY = as.matrix(data$intYsurv),
     nYsurv = data$nYsurv,
@@ -118,7 +129,7 @@ if(!is.null(nL)){
     x0 = data$x0,
     z0 = data$z0,
     q0 = data$q0,
-    cholesky = cholesky,
+    varcov_format=varcov_format,
     data_surv = as.matrix(data_surv),
     data_surv_intY = as.matrix(data$intYsurv),
     nYsurv = data$nYsurv,
@@ -195,7 +206,7 @@ if(!is.null(nL)){
                                            K = K, nD = nD, mapping =  mapping.to.LP,nL=nL, mapping2=mapping.to.LP2, m_is = data$m_i, if_link = if_link, zitr = data$zitr, ide = data$ide, 
                                            Mod_MatrixY = data$Mod.MatrixY, Mod_MatrixYprim = data$Mod.MatrixYprim, df=data$df,
                                            x = data$x, z = data$z, q = data$q, nb_paraD = paras$nb_paraD,
-                                           x0 = data$x0, z0 = data$z0, q0 = data$q0, cholesky = cholesky, tau = data$tau, tau_is=data$tau_is,
+                                           x0 = data$x0, z0 = data$z0, q0 = data$q0, varcov_format=varcov_format, tau = data$tau, tau_is=data$tau_is,
                                            modA_mat = data$modA_mat, data_surv = as.matrix(data_surv), data_surv_intY = as.matrix(data$intYsurv), nYsurv = data$nYsurv, basehaz = ifelse(paras$basehaz=="Weibull", 0, 1), knots_surv = paras$knots_surv, 
                                            np_surv = paras$np_surv, survival = (data$nE>0), assoc =  paras$assoc, truncation = paras$truncation, 
                                            nE = data$nE, Xsurv1 = as.matrix(data$Xsurv1), Xsurv2 = as.matrix(data$Xsurv2), 
@@ -213,7 +224,7 @@ if(!is.null(nL)){
                                            K = K, nD = nD, mapping =  mapping.to.LP, m_is = data$m_i, if_link = if_link, zitr = data$zitr, ide = data$ide, 
                                            Mod_MatrixY = data$Mod.MatrixY, Mod_MatrixYprim = data$Mod.MatrixYprim, df=data$df,
                                            x = data$x, z = data$z, q = data$q, nb_paraD = data$nb_paraD,
-                                           x0 = data$x0, z0 = data$z0, q0 = data$q0, cholesky = cholesky, tau = data$tau, tau_is=data$tau_is,
+                                           x0 = data$x0, z0 = data$z0, q0 = data$q0, varcov_format=varcov_format, tau = data$tau, tau_is=data$tau_is,
                                            modA_mat = data$modA_mat, data_surv = as.matrix(data_surv), data_surv_intY = as.matrix(data$intYsurv), nYsurv = data$nYsurv, basehaz = ifelse(paras$basehaz=="Weibull", 0, 1), knots_surv = paras$knots_surv, 
                                            np_surv = paras$np_surv, survival = (data$nE>0), assoc =  paras$assoc, truncation = paras$truncation, 
                                            nE = data$nE, Xsurv1 = as.matrix(data$Xsurv1), Xsurv2 = as.matrix(data$Xsurv2), 
@@ -290,7 +301,7 @@ if(!is.null(nL)){
                          K = K, nD = nD, mapping =  mapping.to.LP, m_is = data$m_i, if_link = if_link, zitr = data$zitr, ide = data$ide, 
                          Mod_MatrixY = data$Mod.MatrixY, Mod_MatrixYprim = data$Mod.MatrixYprim, df=data$df,
                          x = data$x, z = data$z, q = data$q, nb_paraD = data$nb_paraD,
-                         x0 = data$x0, z0 = data$z0, q0 = data$q0, cholesky = cholesky, tau = data$tau, tau_is=data$tau_is,
+                         x0 = data$x0, z0 = data$z0, q0 = data$q0, varcov_format=varcov_format, tau = data$tau, tau_is=data$tau_is,
                          modA_mat = data$modA_mat, data_surv = as.matrix(data_surv), data_surv_intY = as.matrix(data$intYsurv), nYsurv = data$nYsurv, basehaz = ifelse(paras$basehaz=="Weibull", 0, 1), knots_surv = paras$knots_surv, 
                          np_surv = paras$np_surv, survival = (data$nE>0), assoc =  paras$assoc, truncation = paras$truncation, 
                          nE = data$nE, Xsurv1 = as.matrix(data$Xsurv1), Xsurv2 = as.matrix(data$Xsurv2), 
@@ -334,7 +345,7 @@ if(!is.null(nL)){
                        K = K, nD = nD, mapping =  mapping.to.LP, m_is = data$m_i, if_link = if_link, zitr = data$zitr, ide = data$ide, 
                        Mod_MatrixY = data$Mod.MatrixY, Mod_MatrixYprim = data$Mod.MatrixYprim, df=data$df,
                        x = data$x, z = data$z, q = data$q, nb_paraD = data$nb_paraD,
-                       x0 = data$x0, z0 = data$z0, q0 = data$q0, cholesky = cholesky, tau = data$tau, tau_is=data$tau_is,
+                       x0 = data$x0, z0 = data$z0, q0 = data$q0, varcov_format=varcov_format, tau = data$tau, tau_is=data$tau_is,
                        modA_mat = data$modA_mat, data_surv = as.matrix(data_surv), data_surv_intY = as.matrix(data$intYsurv), nYsurv = data$nYsurv, basehaz = ifelse(paras$basehaz=="Weibull", 0, 1), knots_surv = paras$knots_surv, 
                        np_surv = paras$np_surv, survival = (data$nE>0), assoc =  paras$assoc, truncation = paras$truncation, 
                        nE = data$nE, Xsurv1 = as.matrix(data$Xsurv1), Xsurv2 = as.matrix(data$Xsurv2), 
@@ -380,7 +391,7 @@ if(!is.null(nL)){
                                          K = K, nD = nD, mapping =  mapping.to.LP, m_is = data$m_i, if_link = if_link, zitr = data$zitr, ide = data$ide, 
                                          Mod_MatrixY = data$Mod.MatrixY, Mod_MatrixYprim = data$Mod.MatrixYprim, df=data$df,
                                          x = data$x, z = data$z, q = data$q, nb_paraD = data$nb_paraD,
-                                         x0 = data$x0, z0 = data$z0, q0 = data$q0, cholesky = cholesky, tau = data$tau, tau_is=data$tau_is,
+                                         x0 = data$x0, z0 = data$z0, q0 = data$q0, varcov_format=varcov_format, tau = data$tau, tau_is=data$tau_is,
                                          modA_mat = data$modA_mat, data_surv = as.matrix(data_surv), data_surv_intY = as.matrix(data$intYsurv), 
                                          nYsurv = data$nYsurv, basehaz = ifelse(paras$basehaz=="Weibull", 0, 1), knots_surv = paras$knots_surv, 
                                          np_surv = paras$np_surv, survival = (data$nE>0), assoc =  paras$assoc, truncation = paras$truncation, 

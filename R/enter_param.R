@@ -226,7 +226,8 @@ enter_param<-function(structural.model,
                       fix.p.asso2=rep(0,length(p.asso2)),
                       p.asso.int2=NULL,
                       fix.p.asso.int2=rep(0,length(p.asso.int2)),
-                      get_help=F
+                      get_help=F,
+                      format.varcovRE="cholesky"
 ){
   
   
@@ -942,24 +943,28 @@ enter_param<-function(structural.model,
     #alpha_D parameters for cholesky of all random effects
     cat("\n")
     cat("Var/Cov matrix random effects parameters:\n")
-    cat("varcovRE and fix.varcovRE should contain ",length((p+1):(p+nb_paraD))," parameters.\n")
-    
+    if(format.varcovRE=="cholesky")cat("varcovRE and fix.varcovRE should contain ",length((p+1):(p+nb_paraD))," parameters.\n")
+    if(format.varcovRE=="block")cat("varcovRE and fix.varcovRE should contain a list of four elements:\n -varcovRE.time containing ",nD," square matrices containing the var/cov matrix for the random effects of the model for the change over time of each latent processes;\n-rho.int containing",(nD^2-nD)/2,"correlations between the random intercepts of the baseline models (e.g. 0)\n-rho.int.time",nD," vectors containing the correlations between the baseline intercept and the over time model random effects for each latent process (it should be of length", (nb_RE-nD)/nD,")  \n-var.int containing", nD, "variance of the random baseline intercepts (usually set to 1 for identifiability).")
 
-    
-    alpha_D <- varcovRE#paras.ini[(p+1):(p+nb_paraD)]
-    to_nrow <- nb_RE
-    i_alpha_D <- 0
-    index_paraFixeDconstraint <- NULL
-    
-    for(n in 1:nD){
-      #if(link[n] != "thresholds")
-      #alpha_D[i_alpha_D+1] <- 1
-      i_alpha_D <- i_alpha_D + to_nrow
-      cpt1 <- cpt1 + to_nrow
-      to_nrow <- to_nrow -1
+    if(format.varcovRE=="cholesky"){
+      alpha_D <- varcovRE#paras.ini[(p+1):(p+nb_paraD)]
+      to_nrow <- nb_RE
+      i_alpha_D <- 0
+      index_paraFixeDconstraint <- NULL
+      for(n in 1:nD){
+        #if(link[n] != "thresholds")
+        #alpha_D[i_alpha_D+1] <- 1
+        i_alpha_D <- i_alpha_D + to_nrow
+        cpt1 <- cpt1 + to_nrow
+        to_nrow <- to_nrow -1
+      }
+      p <- p+nb_paraD
+      paraFixeDconstraint <- rep(1,nD)
     }
-    p <- p+nb_paraD
-    paraFixeDconstraint <- rep(1,nD)
+    
+    
+    
+    
     # para of transition matrix vec_alpha_ij
     #alpha_D parameters for cholesky of all random effects
     cat("\n")
@@ -1121,30 +1126,62 @@ enter_param<-function(structural.model,
   p <- p+n_col_x
   cpt1 <- cpt1 + n_col_x
   
-  #alpha_D parameters for cholesky of all random effects
-  if(length(varcovRE)!=length((p+1):(p+nb_paraD))){
-    stop("varcovRE should contain ",length((p+1):(p+nb_paraD))," parameters.")
-  }
-  if(length(fix.varcovRE)!=length((p+1):(p+nb_paraD))){
-    stop("fix.varcovRE should contain ",length((p+1):(p+nb_paraD))," parameters.")
+  if(format.varcovRE=="cholesky"){
+    #alpha_D parameters for cholesky of all random effects
+    if(length(varcovRE)!=length((p+1):(p+nb_paraD))){
+      stop("varcovRE should contain ",length((p+1):(p+nb_paraD))," parameters.")
+    }
+    if(length(fix.varcovRE)!=length((p+1):(p+nb_paraD))){
+      stop("fix.varcovRE should contain ",length((p+1):(p+nb_paraD))," parameters.")
+    }
+    
+    
+    alpha_D <- varcovRE#paras.ini[(p+1):(p+nb_paraD)]
+    to_nrow <- nb_RE
+    i_alpha_D <- 0
+    index_paraFixeDconstraint <- NULL
+    
+    for(n in 1:nD){
+      #if(link[n] != "thresholds")
+      #alpha_D[i_alpha_D+1] <- 1
+      i_alpha_D <- i_alpha_D + to_nrow
+      cpt1 <- cpt1 + to_nrow
+      to_nrow <- to_nrow -1
+    }
+    p <- p+nb_paraD
+    paraFixeDconstraint <- rep(1,nD)
+    # para of transition matrix vec_alpha_ij
+    #alpha_D parameters for cholesky of all random effects
+    
   }
   
-  alpha_D <- varcovRE#paras.ini[(p+1):(p+nb_paraD)]
-  to_nrow <- nb_RE
-  i_alpha_D <- 0
-  index_paraFixeDconstraint <- NULL
   
-  for(n in 1:nD){
-    #if(link[n] != "thresholds")
-    #alpha_D[i_alpha_D+1] <- 1
-    i_alpha_D <- i_alpha_D + to_nrow
-    cpt1 <- cpt1 + to_nrow
-    to_nrow <- to_nrow -1
+  
+  if(format.varcovRE=="block"){
+    if(is.null(varcovRE$var.int)) varcovRE$var.int <- rep(1,nD)
+    if(length(varcovRE$var.int)!=nD) stop(paste0("The length of varcovRE$var.int should be ",nD,"."))
+    if(any(varcovRE$var.int!=1))warning("The variance of the random baseline intercept is usually set to 1 for identifiability.")
+   
+     if(length(varcovRE$varcovRE.time)!=nD) stop(paste("varcovRE$varcovRE.time should contain", nD,"square matrices."))
+    lapply(varcovRE$varcovRE.time, function(x) if(nrow(x)!=ncol(x)) stop("all varcovRE$varcovRE.time elements should be square matrices."))
+    lapply(varcovRE$varcovRE.time, function(x) if(nrow(x)!=(nb_RE-nD)/nD) stop(paste("all varcovRE$varcovRE.time elements should have",(nb_RE-nD)/nD,"rows/columns.")))
+    lapply(varcovRE$varcovRE.time, function(x) if(!isSymmetric.matrix(x)) stop(paste("all varcovRE$varcovRE.time elements be symmetric.")))
+    varcovRE.time.chol <- lapply(varcovRE$varcovRE.time, function(x) t(chol(x)))
+    
+    if(is.null(varcovRE$rho.int))varcovRE$rho.int <- rep(0,(nD^2-nD)/2)
+    if(length(varcovRE$rho.int)!=(nD^2-nD)/2)stop(paste0("The length of varcovRE$rho.int should be ",(nD^2-nD)/2,"."))
+    if(any(varcovRE$rho.int<0)|any(varcovRE$rho.int>1) )stop("All elements of varcovRE$rho.int should be between 0 and 1.")
+    
+   
+    if(is.null(varcovRE$rho.int.time))varcovRE$rho.int.time <- lapply(1:nD,function(x)rep(0,(nb_RE-nD)/nD))
+    if(length(varcovRE$rho.int.time)!=nD)stop(paste0("The length of varcovRE$rho.int.time should be ",nD,"."))
+    if(any(unlist(lapply(varcovRE$rho.int.time,function(x)length(x)!=(nb_RE-nD)/nD))))stop(paste("All elements of varcovRE$rho.int.time should be of length",(nb_RE-nD)/nD))
+    
+    alpha_D <- c(varcovRE$var.int,unlist(varcovRE.time.chol),-1+2*exp(varcovRE$rho.int)/(1+exp(varcovRE$rho.int)),unlist(lapply(varcovRE$rho.int.time,function(x)-1+2*exp(x)/(1+exp(x)))))
+    print(length(alpha_D))
+    if(is.null(fix.varcovRE))fix.varcovRE <- c(rep(1,nD),rep(0,length(alpha_D)-nD))
+    else fix.varcovRE <- c(fix.varcovRE$var.int,unlist(lapply(fix.varcovRE$varcovRE.time,function(x)x[lower.tri(x)])),fix.varcovRE$rho.int,unlist(varcovRE$rho.int.time))
   }
-  p <- p+nb_paraD
-  paraFixeDconstraint <- rep(1,nD)
-  # para of transition matrix vec_alpha_ij
-  #alpha_D parameters for cholesky of all random effects
 
   if(length(transitionmatrix)!=length((p+1):(p + L*nD*nD))){
     stop("transitionmatrix should contain ",length((p+1):(p + L*nD*nD))," parameters.")

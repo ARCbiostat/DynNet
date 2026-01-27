@@ -96,7 +96,7 @@
 #' @param Time indicates the name of the covariate representing the time 
 #' @param subject indicates the name of the covariate representing the grouping structure
 #' @param data indicates the data frame containing all the variables for estimating the model.
-#' @param cholesky logical indicating if the variance covariance matrix is parameterized using the cholesky (TRUE by default) or the correlation (FALSE)
+#' @param varcovRE.format character indicating how the variance covariance matrix is parameterized: "cholesky" (by default),"correlation" or "block"
 #' @param Tentry name of the variable of entry time
 #' @param Event name of the variable of event time
 #' @param StatusEvent name of the variable of event status
@@ -268,7 +268,7 @@
 
 DynNet <- function(structural.model, measurement.model, parameters, 
                    option, Time, Tentry ="Tentry", Event = "Event", StatusEvent = "StatusEvent", basehaz = NULL, subject, data, seed=NULL, 
-                   TimeDiscretization = FALSE, cholesky=TRUE, predict_ui = FALSE,...){
+                   TimeDiscretization = FALSE, varcovRE.format="cholesky", predict_ui = FALSE,...){
 
   cl <- match.call()
   ptm <- proc.time()  
@@ -681,7 +681,7 @@ DynNet <- function(structural.model, measurement.model, parameters,
                         nD = nD, mapping.to.LP = mapping.to.LP,nL=nL,mapping.to.LP2=mapping.to.LP2, link = link, knots = knots, subject = subject, data = data, Time = Time, 
                         predict_ui = predict_ui, Survdata = Survdata, basehaz = basehaz, knots_surv = knots_surv, assoc = assoc, truncation = truncation, 
                         fixed.survival.models = fixed.survival.models, interactionY.survival.models = interactionY.survival.models,
-                        makepred = option$makepred, MCnr_pred = option$MCnr_pred, MCnr = option$MCnr, MCnr2 = option$MCnr2, type_int = option$type_int, sequence = sequence, ind_seq_i = ind_seq_i, nmes = nmes, cholesky = cholesky,
+                        makepred = option$makepred, MCnr_pred = option$MCnr_pred, MCnr = option$MCnr, MCnr2 = option$MCnr2, type_int = option$type_int, sequence = sequence, ind_seq_i = ind_seq_i, nmes = nmes, varcovRE.format = varcovRE.format,
                         paras.ini= paras.ini, paraFixeUser = paraFixeUser, indexparaFixeUser = indexparaFixeUser,  
                         maxiter = maxiter, zitr = zitr, ide = ide0, univarmaxiter = univarmaxiter, nproc = nproc, epsa = epsa, epsb = epsb, epsd = epsd, 
                         print.info = print.info, TimeDiscretization = TimeDiscretization, Tentry = Tentry, Event = Event, StatusEvent = StatusEvent)

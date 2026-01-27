@@ -37,7 +37,7 @@ Parametre <- function(K, nD, vec_ncol_x0n, n_col_x, nb_RE, stochErr=FALSE, index
                       paraFixeUser=NULL, L = 1, paras.ini, ncolMod.MatrixY, link, npara_k, 
                       Survdata = NULL, basehaz = NULL, knots_surv = NULL, assoc = NULL, truncation = F,
                       data, outcomes, df, nE = 0, np_surv = 0, fixed.survival.models = NULL, 
-                      interactionY.survival.models = NULL, nYsurv = 0){
+                      interactionY.survival.models = NULL, nYsurv = 0,varcovRE.format="cholesky"){
   cl <- match.call()
   
   #   require(MASS)
@@ -46,7 +46,16 @@ Parametre <- function(K, nD, vec_ncol_x0n, n_col_x, nb_RE, stochErr=FALSE, index
   # K = number of outcomes
   #======================================================================================
   
-  nb_paraD = nb_RE*(nb_RE+1)/2
+  if(varcovRE.format=="cholesky"){
+    nb_paraD = nb_RE*(nb_RE+1)/2
+  }
+  
+  if(varcovRE.format=="block"){
+    nq <- (nb_RE-nD)/nD
+    # random int + cholesky + rho int +rho int slopes
+    nb_paraD=nD+(nq*(nq+1)/2)*nD+(nD^2-nD)/2+nD*nq
+    
+  }
   indexparaFixeForIden <- NULL
   # if user not specified initial parameters
   
