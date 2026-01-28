@@ -601,6 +601,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// DparBlock
+arma::mat DparBlock(int nD, int nq, const arma::vec& par);
+RcppExport SEXP _DynNet_DparBlock(SEXP nDSEXP, SEXP nqSEXP, SEXP parSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type nD(nDSEXP);
+    Rcpp::traits::input_parameter< int >::type nq(nqSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type par(parSEXP);
+    rcpp_result_gen = Rcpp::wrap(DparBlock(nD, nq, par));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_DynNet_Loglik", (DL_FUNC) &_DynNet_Loglik, 44},
@@ -629,6 +642,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_DynNet_fct_pred_curlev_slope", (DL_FUNC) &_DynNet_fct_pred_curlev_slope, 26},
     {"_DynNet_f_survival_ui", (DL_FUNC) &_DynNet_f_survival_ui, 24},
     {"_DynNet_VecToMat", (DL_FUNC) &_DynNet_VecToMat, 3},
+    {"_DynNet_DparBlock", (DL_FUNC) &_DynNet_DparBlock, 3},
     {NULL, NULL, 0}
 };
 

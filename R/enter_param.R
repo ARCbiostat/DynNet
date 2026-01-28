@@ -1166,7 +1166,7 @@ enter_param<-function(structural.model,
     lapply(varcovRE$varcovRE.time, function(x) if(nrow(x)!=ncol(x)) stop("all varcovRE$varcovRE.time elements should be square matrices."))
     lapply(varcovRE$varcovRE.time, function(x) if(nrow(x)!=(nb_RE-nD)/nD) stop(paste("all varcovRE$varcovRE.time elements should have",(nb_RE-nD)/nD,"rows/columns.")))
     lapply(varcovRE$varcovRE.time, function(x) if(!isSymmetric.matrix(x)) stop(paste("all varcovRE$varcovRE.time elements be symmetric.")))
-    varcovRE.time.chol <- lapply(varcovRE$varcovRE.time, function(x) t(chol(x)))
+    varcovRE.time.chol <- lapply(varcovRE$varcovRE.time, function(x) t(chol(x))[lower.tri(t(chol(x)),diag = T)])
     
     if(is.null(varcovRE$rho.int))varcovRE$rho.int <- rep(0,(nD^2-nD)/2)
     if(length(varcovRE$rho.int)!=(nD^2-nD)/2)stop(paste0("The length of varcovRE$rho.int should be ",(nD^2-nD)/2,"."))
@@ -1177,7 +1177,7 @@ enter_param<-function(structural.model,
     if(length(varcovRE$rho.int.time)!=nD)stop(paste0("The length of varcovRE$rho.int.time should be ",nD,"."))
     if(any(unlist(lapply(varcovRE$rho.int.time,function(x)length(x)!=(nb_RE-nD)/nD))))stop(paste("All elements of varcovRE$rho.int.time should be of length",(nb_RE-nD)/nD))
     
-    alpha_D <- c(varcovRE$var.int,unlist(varcovRE.time.chol),-1+2*exp(varcovRE$rho.int)/(1+exp(varcovRE$rho.int)),unlist(lapply(varcovRE$rho.int.time,function(x)-1+2*exp(x)/(1+exp(x)))))
+    alpha_D <- c(varcovRE$var.int,unlist(varcovRE.time.chol),inv_rho(varcovRE$rho.int),unlist(lapply(varcovRE$rho.int.time,function(x)inv_rho(x))))
     print(length(alpha_D))
     if(is.null(fix.varcovRE))fix.varcovRE <- c(rep(1,nD),rep(0,length(alpha_D)-nD))
     else fix.varcovRE <- c(fix.varcovRE$var.int,unlist(lapply(fix.varcovRE$varcovRE.time,function(x)x[lower.tri(x)])),fix.varcovRE$rho.int,unlist(varcovRE$rho.int.time))
@@ -1409,4 +1409,8 @@ enter_param<-function(structural.model,
 }
   
 
-  
+inv_rho <- function(rho) {
+  if (any(abs(rho) >= 1)) stop("rho must be strictly between -1 and 1")
+  eta <- log((1 + rho) / (1 - rho))
+  return(eta)
+}

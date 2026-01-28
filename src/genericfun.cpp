@@ -1584,3 +1584,220 @@ arma::mat VecToMat(arma::vec& y, int K, int m_i){
 
   return(mat_y);
 }
+
+
+
+// // [[Rcpp::depends(RcppArmadillo)]]
+// #include <RcppArmadillo.h>
+// using namespace arma;
+// using namespace Rcpp;
+// 
+// inline mat chol_to_cov(int q, const vec &params, uword &k) {
+//   mat L = zeros<mat>(q, q);
+//   for (int j = 0; j < q; ++j)
+//     for (int i = j; i < q; ++i)
+//       L(i, j) = params[k++];
+//   return L * L.t();
+// }
+// 
+// /**
+//  * DparBlock_sdcov:
+//  * Ordering of variables:
+//  *   [ intercepts (nD), RE_{proc 1} (nq), RE_{proc 2} (nq), ..., RE_{proc nD} (nq) ].
+//  *
+//  * Parameter layout (generalizing your example):
+//  *   A) sd_intercepts:              length nD
+//  *   B) For d=1..nD: Ld (nq x nq):  length nD * [nq(nq+1)/2]
+//  *   C) Intercept cross-covariances (i>j): length nD(nD-1)/2 (fill lower-tri by columns)
+//  *   D) Intercept–own-RE covariances:      length nD * nq
+//  *
+//  * Cross-process RE covariances are set to 0.
+//  * Intercept–RE covariances with i != d are set to 0.
+//  *
+//  * NOTE: This layout does NOT guarantee SPD globally (only within each RE block).
+//  */
+// // [[Rcpp::export]]
+// arma::mat DparBlock(int nD, int nq, const arma::vec &par) {
+//   if (nD <= 0 || nq <= 0) stop("nD and nq must be positive.");
+//   
+//   const uword len_sd0  = (uword)nD;
+//   const uword len_Lall = (uword)nD * (uword)(nq * (nq + 1) / 2);
+//   const uword len_cov0 = (uword)(nD * (nD - 1) / 2);
+//   const uword len_cdr  = (uword)(nD * nq);
+//   const uword expected = len_sd0 + len_Lall + len_cov0 + len_cdr;
+//   
+//   if (par.n_elem != expected) {
+//     stop("DparBlock_sdcov: len(par)=%u, expected=%u for [sd0] + nD*[Ld] + cov0(offdiag) + c_d. "
+//            "(nD=%d, nq=%d)", (unsigned)par.n_elem, (unsigned)expected, nD, nq);
+//   }
+//   
+//   const int Q = nD + nD * nq;
+//   mat D = zeros<mat>(Q, Q);
+//   uword k = 0;
+//   
+//   // A) Intercept variances from SDs
+//   for (int i = 0; i < nD; ++i) {
+//     double sd = par[k++];
+//     D(i, i) = sd * sd;
+//   }
+//   
+//   // B) RE blocks: for each process, nq x nq via Cholesky
+//   std::vector<std::pair<int,int>> re_block_ranges; re_block_ranges.reserve(nD);
+//   for (int d = 0; d < nD; ++d) {
+//     int s = nD + d * nq, e = s + nq - 1;
+//     re_block_ranges.emplace_back(s, e);
+//     mat Sig_d = chol_to_cov(nq, par, k);
+//     D.submat(s, s, e, e) = Sig_d;
+//   }
+//   
+//   // C) Intercept cross-covariances (lower-tri by column)
+//   for (int j = 0; j < nD; ++j) {
+//     for (int i = j + 1; i < nD; ++i) {
+//       double cij = par[k++];
+//       D(i, j) = cij;
+//       D(j, i) = cij;
+//     }
+//   }
+//   
+//   // D) cov(intercept_d, RE_{d,·}) for each process d
+//   for (int d = 0; d < nD; ++d) {
+//     int s = re_block_ranges[d].first;
+//     int e = re_block_ranges[d].second;
+//     for (int qk = 0; qk < nq; ++qk) {
+//       double cdk = par[k++];
+//       int re_idx = s + qk;
+//       D(d, re_idx) = cdk;
+//       D(re_idx, d) = cdk;
+//     }
+//   }
+//   
+//   // Symmetry
+//   D = 0.5 * (D + D.t());
+//   return D;
+// }
+
+
+
+// [[Rcpp::depends(RcppArmadillo)]]
+#include <RcppArmadillo.h>
+#include <cmath>
+using namespace arma;
+using namespace Rcpp;
+
+// ---- Helper: build Sigma = L * L^T from lower-triangular (by column) params ----
+inline mat chol_to_cov(int q, const vec &params, uword &k) {
+  mat L = zeros<mat>(q, q);
+  for (int j = 0; j < q; ++j)
+    for (int i = j; i < q; ++i)
+      L(i, j) = params[k++];
+  return L * L.t();
+}
+
+// ---- Helper: map unconstrained eta ∈ R to correlation rho ∈ (-1, 1) ----
+// Using rho = tanh(eta / 2) for numerical stability.
+// Optionally clipped to avoid exactly ±1 due to roundoff.
+inline double eta_to_rho(double eta) {
+  double rho = std::tanh(eta * 0.5);
+  const double eps = 1e-12;
+  if (rho >= 1.0) rho = 1.0 - eps;
+  if (rho <= -1.0) rho = -1.0 + eps;
+  return rho;
+}
+
+/**
+ * DparBlock (etas version):
+ * Ordering of variables (rows/cols):
+ *   [ intercepts (nD),
+ *     RE_{proc 1} (nq),
+ *     RE_{proc 2} (nq),
+ *     ...,
+ *     RE_{proc nD} (nq) ].
+ *
+ * Parameter layout (generalizing your example), LENGTH:
+ *   A) sd_intercepts:                          length nD                (SDs, not variances)
+ *   B) For d=1..nD: Ld (nq x nq, lower-tri):   length nD * [nq(nq+1)/2] (per-process RE via Cholesky)
+ *   C) Intercept cross-terms (i>j), as ETA:    length nD(nD-1)/2        (lower-tri by columns)
+ *      -> We transform: rho = tanh(eta/2), then cov = rho * sd_i * sd_j
+ *   D) Intercept–own-RE cross-terms as ETA:    length nD * nq
+ *      -> For each process d and RE coordinate k:
+ *         rho = tanh(eta/2),
+ *         cov = rho * sd_intercept[d] * sd_RE(d,k),
+ *         where sd_RE(d,k) = sqrt(variance of the k-th RE within process d).
+ *
+ * Cross-process RE covariances are set to 0.
+ * Intercept–RE covariances with i != d are set to 0.
+ *
+ * NOTE: This layout does NOT guarantee global SPD (only within each RE block).
+ */
+// [[Rcpp::export]]
+arma::mat DparBlock(int nD, int nq, const arma::vec &par) {
+  if (nD <= 0 || nq <= 0) stop("nD and nq must be positive.");
+  
+  const uword len_sd0  = (uword)nD;
+  const uword len_Lall = (uword)nD * (uword)(nq * (nq + 1) / 2);
+  const uword len_eta0 = (uword)(nD * (nD - 1) / 2); // intercept cross-terms as eta
+  const uword len_etad = (uword)(nD * nq);           // intercept–own-RE as eta
+  const uword expected = len_sd0 + len_Lall + len_eta0 + len_etad;
+  
+  if (par.n_elem != expected) {
+    stop("DparBlock: len(par)=%u, expected=%u for [sd0] + nD*[Ld] + eta0(offdiag) + eta_d. "
+           "(nD=%d, nq=%d)",
+           (unsigned)par.n_elem, (unsigned)expected, nD, nq);
+  }
+  
+  const int Q = nD + nD * nq;
+  mat D = zeros<mat>(Q, Q);
+  uword k = 0;
+  
+  // A) Intercept SDs and variances on the diagonal; store SDs for later use
+  vec sd0(nD);
+  for (int i = 0; i < nD; ++i) {
+    double sd = par[k++];
+    sd0[i] = sd;
+    D(i, i) = sd * sd;
+  }
+  
+  // B) RE blocks via Cholesky; also store per-RE SDs (sqrt of variances) for scaling etas in D)
+  std::vector<std::pair<int,int>> re_block_ranges; re_block_ranges.reserve(nD);
+  mat re_sd = zeros<mat>(nD, nq); // re_sd(d, qk) = SD of RE qk in process d
+  for (int d = 0; d < nD; ++d) {
+    int s = nD + d * nq, e = s + nq - 1;
+    re_block_ranges.emplace_back(s, e);
+    mat Sig_d = chol_to_cov(nq, par, k);
+    D.submat(s, s, e, e) = Sig_d;
+    
+    // Capture SDs (sqrt of diagonal variances) for each qk
+    for (int qk = 0; qk < nq; ++qk) {
+      re_sd(d, qk) = std::sqrt(Sig_d(qk, qk));
+    }
+  }
+  
+  // C) Intercept cross-terms from eta: fill lower-tri by columns
+  for (int j = 0; j < nD; ++j) {
+    for (int i = j + 1; i < nD; ++i) {
+      double eta_ij = par[k++];                  // unconstrained
+      double rho_ij = eta_to_rho(eta_ij);        // in (-1,1)
+      double cij    = rho_ij * sd0[i] * sd0[j];  // covariance
+      D(i, j) = cij;
+      D(j, i) = cij;
+    }
+  }
+  
+  // D) Intercept–own-RE cross-terms from eta for each process d
+  for (int d = 0; d < nD; ++d) {
+    int s = re_block_ranges[d].first;
+    // int e = re_block_ranges[d].second; // unused, kept for readability
+    for (int qk = 0; qk < nq; ++qk) {
+      double eta_dk = par[k++];                       // unconstrained
+      double rho_dk = eta_to_rho(eta_dk);             // in (-1,1)
+      double c_dk   = rho_dk * sd0[d] * re_sd(d, qk); // covariance
+      int re_idx    = s + qk;
+      D(d, re_idx)     = c_dk;
+      D(re_idx, d)     = c_dk;
+    }
+  }
+  
+  // Symmetry (numerical safety)
+  D = 0.5 * (D + D.t());
+  return D;
+}

@@ -216,6 +216,7 @@ if(!is.null(nL)){
       
         temp$b <-  get_opt_formative(temp$b, paras$paras_block_dim, mapping=mapping.to.LP, mapping2=mapping.to.LP2,nRE=paras$nRE)
       }else{
+        print(data$nb_paraD)
         temp <- try(marqLevAlg::marqLevAlg(b = paras$paraOpt, fn = Loglik, nproc = nproc, .packages = NULL, epsa=epsa, epsb=epsb, epsd=epsd,
                                            maxiter=maxiter, print.info = print.info,  minimize = FALSE,
                                            DeltaT=DeltaT, paraFixe = paras$paraFixe, posfix = paras$posfix,

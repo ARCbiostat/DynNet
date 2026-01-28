@@ -459,3 +459,7 @@ VecToMat <- function(y, K, m_i) {
     .Call(`_DynNet_VecToMat`, y, K, m_i)
 }
 
+DparBlock <- function(nD, nq, par) {
+    .Call(`_DynNet_DparBlock`, nD, nq, par)
+}
+

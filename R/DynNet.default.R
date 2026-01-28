@@ -89,14 +89,14 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
                          randoms_DeltaX.models = randoms_DeltaX.models, mod_trans.model = mod_trans.model, 
                          outcomes = outcomes, nD = nD, nL=nL,mapping=mapping.to.LP,mapping2=mapping.to.LP2,link=link, knots = knots, zitr= zitr, ide = ide, 
                          Time = Time, Survdata = Survdata, basehaz = basehaz, fixed.survival.models =fixed.survival.models, 
-                         interactionY.survival.models = interactionY.survival.models, DeltaT=DeltaT, assoc = assoc, truncation = truncation)
+                         interactionY.survival.models = interactionY.survival.models, DeltaT=DeltaT, assoc = assoc, truncation = truncation,varcovRE.format = varcovRE.format)
   }else{
     data_F <- DataFormat(data=data, subject = subject, fixed_X0.models = fixed_X0.models,
                          randoms_X0.models = randoms_X0.models, fixed_DeltaX.models = fixed_DeltaX.models, 
                          randoms_DeltaX.models = randoms_DeltaX.models, mod_trans.model = mod_trans.model, 
                          outcomes = outcomes, nD = nD,link=link, knots = knots, zitr= zitr, ide = ide, 
                          Time = Time, Survdata = Survdata, basehaz = basehaz, fixed.survival.models =fixed.survival.models, 
-                         interactionY.survival.models = interactionY.survival.models, DeltaT=DeltaT, assoc = assoc, truncation = truncation)
+                         interactionY.survival.models = interactionY.survival.models, DeltaT=DeltaT, assoc = assoc, truncation = truncation,varcovRE.format = varcovRE.format)
   }
   
   

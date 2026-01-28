@@ -2367,6 +2367,12 @@ double Loglik(int K, int nD, arma::vec& mapping, arma::vec& paraOpt, arma::vec& 
   if(varcov_format==1){
     matD = DparChol(nb_RE, alpha_D);
   }
+  
+  if(varcov_format==3){
+    Rcout << "inside varcov_format 3.\n";
+    int nq=(nb_RE-nD)/nD;
+    matD = DparBlock(nD,nq, alpha_D);
+  }
        
   int n_cols_matD = matD.n_cols;
   Mat<double> matDw = matD(span(0,nD-1),span(0,nD-1));
@@ -2789,8 +2795,16 @@ double Loglik2(int K, int nD, arma::vec& mapping, arma::vec& paraOpt, arma::vec&
     // //cout << det(matD)<<" matD "<<matD;
     // cout << " matD "<<matD;
     
-  }else{
+  }
+  
+  if(varcov_format==2){
     matD = DparChol(nb_RE, alpha_D);
+  }
+  
+  if(varcov_format==3){
+    
+    int nq=(nb_RE-nD)/nD;
+    matD = DparBlock(nD,nq, alpha_D);
   }
   
   int n_cols_matD = matD.n_cols;
