@@ -1729,6 +1729,16 @@ inline double eta_to_rho(double eta) {
  *
  * NOTE: This layout does NOT guarantee global SPD (only within each RE block).
  */
+
+//'  Function that computes a symetric D matric from it Block
+//'  
+//' @param nD an integer
+//' @param nq an integer
+//' @param qvector a vector 
+//' 
+//' @return a symetric positive define matrix
+//' @export
+//' 
 // [[Rcpp::export]]
 arma::mat DparBlock(int nD, int nq, const arma::vec &par) {
   if (nD <= 0 || nq <= 0) stop("nD and nq must be positive.");

@@ -459,6 +459,15 @@ VecToMat <- function(y, K, m_i) {
     .Call(`_DynNet_VecToMat`, y, K, m_i)
 }
 
+#'  Function that computes a symetric D matric from it Block
+#'  
+#' @param nD an integer
+#' @param nq an integer
+#' @param qvector a vector 
+#' 
+#' @return a symetric positive define matrix
+#' @export
+#' 
 DparBlock <- function(nD, nq, par) {
     .Call(`_DynNet_DparBlock`, nD, nq, par)
 }
