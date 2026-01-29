@@ -2368,7 +2368,6 @@ double Loglik(int K, int nD, arma::vec& mapping, arma::vec& paraOpt, arma::vec& 
   }
   
   if(varcov_format==3){
-    Rcout << "inside varcov_format 3.\n";
     int nq=(nb_RE-nD)/nD;
     matD = DparBlock(nD,nq, alpha_D);
   }

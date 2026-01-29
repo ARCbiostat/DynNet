@@ -44,7 +44,7 @@ enter_param(
   p.asso.int2 = NULL,
   fix.p.asso.int2 = rep(0, length(p.asso.int2)),
   get_help = F,
-  format.varcovRE = "cholesky"
+  varcovRE.format = "cholesky"
 )
 }
 \arguments{

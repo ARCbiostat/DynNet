@@ -305,7 +305,7 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
     L <- paste("Rho.", 1:npRE,sep="")
   }
   if(varcovRE.format=="block"){
-    stop("Still to develop")
+    L <- paste("Block",1:npRE,sep="")
   }
   
   # colname  measurement error
@@ -420,7 +420,7 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
     res$varcov <- covea
   }
   if(varcovRE.format=="block"){
-    stop("still to develop")
+    res$varcov <- DparBlock(nD,(nb_RE-nD)/nD,res$coefficients[grep("Block", res$colnames)])
   }
   
   res$coefficients <- as.matrix(res$coefficients)

@@ -227,7 +227,7 @@ enter_param<-function(structural.model,
                       p.asso.int2=NULL,
                       fix.p.asso.int2=rep(0,length(p.asso.int2)),
                       get_help=F,
-                      format.varcovRE="cholesky"
+                      varcovRE.format="cholesky"
 ){
   
   
@@ -943,10 +943,10 @@ enter_param<-function(structural.model,
     #alpha_D parameters for cholesky of all random effects
     cat("\n")
     cat("Var/Cov matrix random effects parameters:\n")
-    if(format.varcovRE=="cholesky")cat("varcovRE and fix.varcovRE should contain ",length((p+1):(p+nb_paraD))," parameters.\n")
-    if(format.varcovRE=="block")cat("varcovRE and fix.varcovRE should contain a list of four elements:\n -varcovRE.time containing ",nD," square matrices containing the var/cov matrix for the random effects of the model for the change over time of each latent processes;\n-rho.int containing",(nD^2-nD)/2,"correlations between the random intercepts of the baseline models (e.g. 0)\n-rho.int.time",nD," vectors containing the correlations between the baseline intercept and the over time model random effects for each latent process (it should be of length", (nb_RE-nD)/nD,")  \n-var.int containing", nD, "variance of the random baseline intercepts (usually set to 1 for identifiability).")
+    if(varcovRE.format=="cholesky")cat("varcovRE and fix.varcovRE should contain ",length((p+1):(p+nb_paraD))," parameters.\n")
+    if(varcovRE.format=="block")cat("varcovRE and fix.varcovRE should contain a list of four elements:\n -varcovRE.time containing ",nD," square matrices containing the var/cov matrix for the random effects of the model for the change over time of each latent processes;\n-rho.int containing",(nD^2-nD)/2,"correlations between the random intercepts of the baseline models (e.g. 0)\n-rho.int.time",nD," vectors containing the correlations between the baseline intercept and the over time model random effects for each latent process (it should be of length", (nb_RE-nD)/nD,")  \n-var.int containing", nD, "variance of the random baseline intercepts (usually set to 1 for identifiability).")
 
-    if(format.varcovRE=="cholesky"){
+    if(varcovRE.format=="cholesky"){
       alpha_D <- varcovRE#paras.ini[(p+1):(p+nb_paraD)]
       to_nrow <- nb_RE
       i_alpha_D <- 0
@@ -1126,7 +1126,7 @@ enter_param<-function(structural.model,
   p <- p+n_col_x
   cpt1 <- cpt1 + n_col_x
   
-  if(format.varcovRE=="cholesky"){
+  if(varcovRE.format=="cholesky"){
     #alpha_D parameters for cholesky of all random effects
     if(length(varcovRE)!=length((p+1):(p+nb_paraD))){
       stop("varcovRE should contain ",length((p+1):(p+nb_paraD))," parameters.")
@@ -1157,7 +1157,7 @@ enter_param<-function(structural.model,
   
   
   
-  if(format.varcovRE=="block"){
+  if(varcovRE.format=="block"){
     if(is.null(varcovRE$var.int)) varcovRE$var.int <- rep(1,nD)
     if(length(varcovRE$var.int)!=nD) stop(paste0("The length of varcovRE$var.int should be ",nD,"."))
     if(any(varcovRE$var.int!=1))warning("The variance of the random baseline intercept is usually set to 1 for identifiability.")
@@ -1180,7 +1180,7 @@ enter_param<-function(structural.model,
     alpha_D <- c(varcovRE$var.int,unlist(varcovRE.time.chol),inv_rho(varcovRE$rho.int),unlist(lapply(varcovRE$rho.int.time,function(x)inv_rho(x))))
     print(length(alpha_D))
     if(is.null(fix.varcovRE))fix.varcovRE <- c(rep(1,nD),rep(0,length(alpha_D)-nD))
-    else fix.varcovRE <- c(fix.varcovRE$var.int,unlist(lapply(fix.varcovRE$varcovRE.time,function(x)x[lower.tri(x)])),fix.varcovRE$rho.int,unlist(varcovRE$rho.int.time))
+    else fix.varcovRE <- c(fix.varcovRE$var.int,unlist(lapply(fix.varcovRE$varcovRE.time,function(x)x[lower.tri(x,diag = T)])),fix.varcovRE$rho.int,unlist(varcovRE$rho.int.time))
   }
 
   if(length(transitionmatrix)!=length((p+1):(p + L*nD*nD))){
