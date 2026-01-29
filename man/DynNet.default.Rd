@@ -37,7 +37,7 @@ DynNet.default(
   sequence = NULL,
   ind_seq_i = NULL,
   nmes = NULL,
-  cholesky = FALSE,
+  varcovRE.format = "cholesky",
   paras.ini = NULL,
   indexparaFixeUser,
   paraFixeUser,
@@ -125,7 +125,7 @@ outcomes and exogenous latents processes (only used for formative structural mod
 
 \item{nmes}{number of repeated measurements}
 
-\item{cholesky}{logical indicating if the variance covariance matrix is parameterized using the cholesky (TRUE, by default) or the correlation (FALSE)}
+\item{varcovRE.format}{character indicating how the variance covariance matrix is parameterized: "cholesky" (by default),"correlation" or "block"}
 
 \item{paras.ini}{initial values for parameters, default values is NULL}
 

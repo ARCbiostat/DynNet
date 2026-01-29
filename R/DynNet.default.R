@@ -301,7 +301,7 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
   if(varcovRE.format=="cholesky"){
     L <- paste("Chol.", 1:npRE,sep="")
   }
-  if(varcovRE.format=="cholesky"){
+  if(varcovRE.format=="correlation"){
     L <- paste("Rho.", 1:npRE,sep="")
   }
   if(varcovRE.format=="block"){
@@ -444,7 +444,7 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
   ##output related big data like predictions, stocked matrix
   # res$fitted.values
   res$modA_mat = data_F$modA_mat
-  res$cholesky <- cholesky
+  res$varcovRE.format <- varcovRE.format
   res$call <- match.call()
   class(res) <- 'DynNet'
   res

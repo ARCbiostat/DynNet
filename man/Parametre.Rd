@@ -30,7 +30,8 @@ Parametre(
   np_surv = 0,
   fixed.survival.models = NULL,
   interactionY.survival.models = NULL,
-  nYsurv = 0
+  nYsurv = 0,
+  varcovRE.format = "cholesky"
 )
 }
 \arguments{

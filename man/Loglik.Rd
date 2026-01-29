@@ -28,7 +28,7 @@ Loglik(
   x0,
   z0,
   q0,
-  cholesky,
+  varcov_format,
   data_surv,
   data_surv_intY,
   nYsurv,
@@ -99,8 +99,6 @@ outcomes and latents processes}
 
 \item{q0}{a vector of number of random effects on each initial latent process level}
 
-\item{cholesky}{logical indicating if the variance covariance matrix is parameterized using the cholesky (TRUE, by default) or the correlation (FALSE)}
-
 \item{data_surv}{matrix of Tentry, Event, StatusEvent and covariates for survival models}
 
 \item{data_surv_intY}{matrix of covariates in interaction with Y in survival models}
@@ -140,6 +138,8 @@ outcomes and latents processes}
 \item{DeltaT}{double that indicates the discretization step}
 
 \item{ii}{individual considered}
+
+\item{cholesky}{logical indicating if the variance covariance matrix is parameterized using the cholesky (TRUE, by default) or the correlation (FALSE)}
 }
 \value{
 double

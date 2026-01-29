@@ -2215,7 +2215,6 @@ double Loglik(int K, int nD, arma::vec& mapping, arma::vec& paraOpt, arma::vec& 
               arma::vec& if_link, arma::vec& zitr, arma::vec& ide, 
               arma::vec& tau, arma::vec& tau_is, arma::mat& modA_mat, double DeltaT, int ii){
 
-  Rcout << "started loglik.\n";
   double loglik = 0.e0;
   arma::mat matrixP = zeros(K,nD);
   for(int k = 0; k<K; k++){
@@ -2578,7 +2577,6 @@ double Loglik(int K, int nD, arma::vec& mapping, arma::vec& paraOpt, arma::vec& 
   //                         z0(span(n*nD,(n+1)*nD-1), span(0,(ncol_z0-1))), x(span(n*nD*m,((n+1)*nD*m-1)), span(0,(ncol_x-1))),
   //                         z(span(n*nD*m,((n+1)*nD*m-1)), span(0,(ncol_z-1))),alpha_mu0, alpha_mu, matDw, matDw_u, matDu,
   //                         matB, Sig, G_mat_A_0_to_tau_i, G_mat_prod_A_0_to_tau,  DeltaT);
-  Rcout << "got here.\n";
   return(loglik);
   // return(YtildPrim); 
 }

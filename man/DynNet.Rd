@@ -18,7 +18,7 @@ DynNet(
   data,
   seed = NULL,
   TimeDiscretization = FALSE,
-  cholesky = TRUE,
+  varcovRE.format = "cholesky",
   predict_ui = FALSE,
   ...
 )
@@ -122,7 +122,7 @@ DynNet(
 
 \item{TimeDiscretization}{a boolean indicating if the initial time has to be discretized (FALSE by default). When setting to FALSE, it allows to avoid discretization when running univariate model during parameter initialization.}
 
-\item{cholesky}{logical indicating if the variance covariance matrix is parameterized using the cholesky (TRUE by default) or the correlation (FALSE)}
+\item{varcovRE.format}{character indicating how the variance covariance matrix is parameterized: "cholesky" (by default),"correlation" or "block"}
 
 \item{predict_ui}{boolean indicating if bayesian estimates of random effects should be computed (FALSE by default)}
 

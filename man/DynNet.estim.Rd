@@ -12,7 +12,7 @@ DynNet.estim(
   mapping.to.LP2 = NULL,
   data,
   if_link = if_link,
-  cholesky = FALSE,
+  varcovRE.format = "cholesky",
   DeltaT = 1,
   MCnr = NULL,
   MCnr2 = NULL,
@@ -40,7 +40,7 @@ outcomes and latents processes}
 
 \item{if_link}{indicates if non linear link is used to transform an outcome}
 
-\item{cholesky}{logical indicating if the variance covariance matrix is parameterized using the cholesky (TRUE, by default) or the correlation (FALSE)}
+\item{varcovRE.format}{character indicating how the variance covariance matrix is parameterized: "cholesky" (by default),"correlation" or "block"}
 
 \item{DeltaT}{indicates the discretization step}
 
