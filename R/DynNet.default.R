@@ -398,11 +398,12 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
   }
   
   nb_RE <- data_F$q0+data_F$q
-  
+
   if(varcovRE.format=="cholesky"){
-    chol <- matrix(0, nb_RE*nD, nb_RE*nD)
-    chol[upper.tri(chol, diag = T)] <- res$coefficients[grep("Chol", res$colnames)]
-    res$varcov <- t(chol)%*%chol
+    # chol <- matrix(0, nb_RE*nD, nb_RE*nD)
+    # chol[upper.tri(chol, diag = T)] <- res$coefficients[grep("Chol", res$colnames)]
+    nb_RE <- length(data_F$q0)+length(data_F$q)
+    res$varcov <- DparChol(nb_RE,res$coefficients[grep("Chol", res$colnames)])
     
   }
   if(varcovRE.format=="correlation"){
@@ -420,6 +421,7 @@ DynNet.default <- function(fixed_X0.models, fixed_DeltaX.models, randoms_X0.mode
     res$varcov <- covea
   }
   if(varcovRE.format=="block"){
+    nb_RE <- length(data_F$q0)+length(data_F$q)
     res$varcov <- DparBlock(nD,(nb_RE-nD)/nD,res$coefficients[grep("Block", res$colnames)])
   }
   
