@@ -436,7 +436,7 @@ DynNet <- function(structural.model, measurement.model, parameters,
   
   formative <- any(grepl("\\([^)]*[+][^)]*\\)", outcomes_by_LP))
   
-  print(formative)
+ 
   outcomes <- NULL
   mapping.to.LP <- NULL
   mapping.to.LP2 <- NULL
