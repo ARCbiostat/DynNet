@@ -44,7 +44,8 @@ enter_param(
   p.asso.int2 = NULL,
   fix.p.asso.int2 = rep(0, length(p.asso.int2)),
   get_help = F,
-  varcovRE.format = "cholesky"
+  varcovRE.format = "cholesky",
+  full_list = F
 )
 }
 \arguments{
@@ -165,6 +166,10 @@ enter_param(
 \item{fix.p.asso.int2}{indicator if the parameters \code{p.asso.int2} are fixed.}
 
 \item{get_help}{logical vector indicating if the dimension of each type of initial values required by the specified model should be printed.Default to FALSE.}
+
+\item{varcovRE.format}{character indication format of random effects var/cov matrix parametrization. "cholesky" (default) or "block".}
+
+\item{full_list}{logical vector indicating whether survival and transformation parameters should be a named list.}
 }
 \value{
 A list with the following elements:

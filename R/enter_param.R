@@ -86,6 +86,8 @@
 #' @param p.asso.int2 initial values for the interactions between covariates and functions of the latent processes in the second transition model (competing risks setting only). Default to NULL.
 #' @param fix.p.asso.int2 indicator if the parameters \code{p.asso.int2} are fixed.
 #' @param get_help logical vector indicating if the dimension of each type of initial values required by the specified model should be printed.Default to FALSE.
+#' @param full_list logical vector indicating whether survival and transformation parameters should be a named list.
+#' @param varcovRE.format character indication format of random effects var/cov matrix parametrization. "cholesky" (default) or "block".
 #' @return A list with the following elements:
 #' \describe{
 #'   \item{paras.ini}{Vector of initial values for all parameters.}
@@ -227,7 +229,9 @@ enter_param<-function(structural.model,
                       p.asso.int2=NULL,
                       fix.p.asso.int2=rep(0,length(p.asso.int2)),
                       get_help=F,
-                      varcovRE.format="cholesky"
+                      varcovRE.format="cholesky",
+                      full_list=F
+                      
 ){
   
   
@@ -1337,6 +1341,30 @@ enter_param<-function(structural.model,
                   paraSig=paraSig, 
                   ParaTransformY=ParaTransformY,
                   para_surv=para_surv)
+  }
+  
+  if(full_list){
+    
+    if(!is.list(transformationY)) warning("Transformation parameters are not a list!")
+    
+    
+    paras <- list(alpha_mu0=alpha_mu0, 
+                  alpha_mu=alpha_mu, 
+                  alpha_D=alpha_D, 
+                  vec_alpha_ij=vec_alpha_ij,  
+                  paraB=paraB, 
+                  paraSig=paraSig, 
+                  ParaTransformY=transformationY,
+                  para_surv=list(baseline1=baseline1,
+                                 p.X1=p.X1,
+                                 p.asso1=p.asso1,
+                                 p.asso.int1=p.asso.int1,
+                                 baseline2=baseline2,
+                                 p.X2=p.X2,
+                                 p.asso2=p.asso2,
+                                 p.asso.int2=p.asso.int2,
+                  ))
+    
   }
   t1 <- 0
   t2 <- 0
