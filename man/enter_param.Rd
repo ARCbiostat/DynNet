@@ -9,7 +9,7 @@ enter_param(
   measurement.model,
   Time,
   subject,
-  data,
+  data = NULL,
   Tentry = NULL,
   Event = NULL,
   StatusEvent = NULL,
@@ -44,8 +44,7 @@ enter_param(
   p.asso.int2 = NULL,
   fix.p.asso.int2 = rep(0, length(p.asso.int2)),
   get_help = F,
-  varcovRE.format = "cholesky",
-  full_list = F
+  varcovRE.format = "cholesky"
 )
 }
 \arguments{
@@ -168,8 +167,6 @@ enter_param(
 \item{get_help}{logical vector indicating if the dimension of each type of initial values required by the specified model should be printed.Default to FALSE.}
 
 \item{varcovRE.format}{character indication format of random effects var/cov matrix parametrization. "cholesky" (default) or "block".}
-
-\item{full_list}{logical vector indicating whether survival and transformation parameters should be a named list.}
 }
 \value{
 A list with the following elements:

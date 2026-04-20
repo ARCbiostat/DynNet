@@ -86,7 +86,6 @@
 #' @param p.asso.int2 initial values for the interactions between covariates and functions of the latent processes in the second transition model (competing risks setting only). Default to NULL.
 #' @param fix.p.asso.int2 indicator if the parameters \code{p.asso.int2} are fixed.
 #' @param get_help logical vector indicating if the dimension of each type of initial values required by the specified model should be printed.Default to FALSE.
-#' @param full_list logical vector indicating whether survival and transformation parameters should be a named list.
 #' @param varcovRE.format character indication format of random effects var/cov matrix parametrization. "cholesky" (default) or "block".
 #' @return A list with the following elements:
 #' \describe{
@@ -194,7 +193,7 @@ enter_param<-function(structural.model,
                       measurement.model,
                       Time,
                       subject,
-                      data,
+                      data=NULL,
                       Tentry = NULL,
                       Event = NULL,
                       StatusEvent = NULL,
@@ -229,8 +228,7 @@ enter_param<-function(structural.model,
                       p.asso.int2=NULL,
                       fix.p.asso.int2=rep(0,length(p.asso.int2)),
                       get_help=F,
-                      varcovRE.format="cholesky",
-                      full_list=F
+                      varcovRE.format="cholesky"
                       
 ){
   
@@ -380,6 +378,32 @@ enter_param<-function(structural.model,
   }
   
   ### pre-traitement of fixed effect on survival 
+  
+  if(is.null(data)){
+    
+    
+    message("simulation mode of the function is used since data is not provided")
+  
+    paras <- list(alpha_mu0=p.initlev, 
+                  alpha_mu= p.slope, 
+                  alpha_D=varcovRE, 
+                  vec_alpha_ij=transitionmatrix,  
+                  paraB=NULL, #check with Anais
+                  paraSig=var.errors, 
+                  ParaTransformY=transformationY,
+                  para_surv=list(baseline1=baseline1,
+                                 p.X1=p.X1,
+                                 p.asso1=p.asso1,
+                                 p.asso.int1=p.asso.int1,
+                                 baseline2=baseline2,
+                                 p.X2=p.X2,
+                                 p.asso2=p.asso2,
+                                 p.asso.int2=p.asso.int2
+                  ))
+    
+    return(paras)
+  }
+  
   colnames<-colnames(data)
   fixed.survival.models <- NULL
   assoc <- 0
@@ -1343,29 +1367,7 @@ enter_param<-function(structural.model,
                   para_surv=para_surv)
   }
   
-  if(full_list){
-    
-    if(!is.list(transformationY)) warning("Transformation parameters are not a list!")
-    
-    
-    paras <- list(alpha_mu0=alpha_mu0, 
-                  alpha_mu=alpha_mu, 
-                  alpha_D=alpha_D, 
-                  vec_alpha_ij=vec_alpha_ij,  
-                  paraB=paraB, 
-                  paraSig=paraSig, 
-                  ParaTransformY=transformationY,
-                  para_surv=list(baseline1=baseline1,
-                                 p.X1=p.X1,
-                                 p.asso1=p.asso1,
-                                 p.asso.int1=p.asso.int1,
-                                 baseline2=baseline2,
-                                 p.X2=p.X2,
-                                 p.asso2=p.asso2,
-                                 p.asso.int2=p.asso.int2,
-                  ))
-    
-  }
+  
   t1 <- 0
   t2 <- 0
   
