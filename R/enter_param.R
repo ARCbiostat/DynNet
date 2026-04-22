@@ -383,7 +383,13 @@ enter_param<-function(structural.model,
     
     
     message("simulation mode of the function is used since data is not provided")
-  
+    if(!is.list(transformationY)){
+      stop("In the simulation mode, transformationY needs to be a names list containing ParaEtha0,ParaEtha1, thresholds, modalities.")
+    }
+    
+    if(sum(!(names(transformationY) %in% c("ParaEtha0", "ParaEtha1", "thresholds", "modalities"))) > 1){
+      stop( stop("In the simulation mode, transformationY needs to be a names list containing ParaEtha0,ParaEtha1, thresholds, modalities."))
+    }
     paras <- list(alpha_mu0=p.initlev, 
                   alpha_mu= p.slope, 
                   alpha_D=varcovRE, 
