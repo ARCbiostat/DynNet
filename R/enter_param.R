@@ -390,9 +390,34 @@ enter_param<-function(structural.model,
     if(sum(!(names(transformationY) %in% c("ParaEtha0", "ParaEtha1", "thresholds", "modalities"))) > 1){
       stop( stop("In the simulation mode, transformationY needs to be a names list containing ParaEtha0,ParaEtha1, thresholds, modalities."))
     }
+    
+    
+    if(varcovRE.format=="block"){
+      if(is.null(varcovRE$var.int)) varcovRE$var.int <- rep(1,nD)
+      if(length(varcovRE$var.int)!=nD) stop(paste0("The length of varcovRE$var.int should be ",nD,"."))
+      if(any(varcovRE$var.int!=1))warning("The variance of the random baseline intercept is usually set to 1 for identifiability.")
+      
+      if(length(varcovRE$varcovRE.time)!=nD) stop(paste("varcovRE$varcovRE.time should contain", nD,"square matrices."))
+      lapply(varcovRE$varcovRE.time, function(x) if(nrow(x)!=ncol(x)) stop("all varcovRE$varcovRE.time elements should be square matrices."))
+      lapply(varcovRE$varcovRE.time, function(x) if(!isSymmetric.matrix(x)) stop(paste("all varcovRE$varcovRE.time elements be symmetric.")))
+      varcovRE.time.chol <- lapply(varcovRE$varcovRE.time, function(x) t(chol(x))[lower.tri(t(chol(x)),diag = T)])
+      
+      if(is.null(varcovRE$rho.int))varcovRE$rho.int <- rep(0,(nD^2-nD)/2)
+      if(length(varcovRE$rho.int)!=(nD^2-nD)/2)stop(paste0("The length of varcovRE$rho.int should be ",(nD^2-nD)/2,"."))
+      if(any(varcovRE$rho.int<0)|any(varcovRE$rho.int>1) )stop("All elements of varcovRE$rho.int should be between 0 and 1.")
+      
+      
+      if(is.null(varcovRE$rho.int.time))varcovRE$rho.int.time <- lapply(1:nD,function(x)rep(0,(nb_RE-nD)/nD))
+      if(length(varcovRE$rho.int.time)!=nD)stop(paste0("The length of varcovRE$rho.int.time should be ",nD,"."))
+      
+      
+      alpha_D <- c(varcovRE$var.int,unlist(varcovRE.time.chol),inv_rho(varcovRE$rho.int),unlist(lapply(varcovRE$rho.int.time,function(x)inv_rho(x))))
+      
+    
+    }
     paras <- list(alpha_mu0=p.initlev, 
                   alpha_mu= p.slope, 
-                  alpha_D=varcovRE, 
+                  alpha_D=alpha_D, 
                   vec_alpha_ij=transitionmatrix,  
                   paraB=NULL, #check with Anais
                   paraSig=var.errors, 
@@ -407,6 +432,10 @@ enter_param<-function(structural.model,
                                  p.asso.int2=p.asso.int2
                   ))
     
+    attr(paras, "components") <- list(
+      structural.model=structural.model,
+      measurement.model=measurement.model
+    )
     return(paras)
   }
   
