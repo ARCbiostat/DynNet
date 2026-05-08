@@ -11,6 +11,7 @@ simulateDynNet(
   parameters,
   TempsFin,
   DeltaT,
+  DeltaVisit,
   basehaz = NULL,
   assocT = NULL,
   seed = 123,
@@ -74,7 +75,9 @@ simulateDynNet(
 
 \item{TempsFin}{Time last observation.}
 
-\item{DeltaT}{Interval between observations.}
+\item{DeltaT}{Discretization steps for the simulation.}
+
+\item{DeltaVisit}{Distance between visits.}
 
 \item{basehaz}{baseline hazard for survival model(s) (default NULL).}
 
