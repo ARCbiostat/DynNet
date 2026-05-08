@@ -52,7 +52,8 @@
 #' }
 #' 
 #' @param TempsFin Time last observation.
-#' @param DeltaT Interval between observations.
+#' @param DeltaT Discretization steps for the simulation.
+#' @param DeltaVisit Distance between visits.
 #' @param basehaz baseline hazard for survival model(s) (default NULL).
 #' @param assocT association structure for survival model(s) (default NULL). Only "value" currently implemented.
 #' @param seed seed for reproducibility. (default 123)
@@ -69,6 +70,7 @@ simulateDynNet <- function(Ni,
                            parameters,
                            TempsFin,
                            DeltaT,
+                           DeltaVisit,
                            basehaz = NULL,
                            assocT=NULL,
                            seed = 123,
@@ -383,16 +385,16 @@ simulateDynNet <- function(Ni,
 
 
   # All times and visits assuming cont time observation
-  Time <- seq(from = 0, to = TempsFin, by = DeltaT)
-  Visit <- seq(0, (length(Time) - 1))
+  time <- seq(from = 0, to = TempsFin, by = DeltaT)
+  Visit <- seq(0, (length(time) - 1))
 
   ############ data part ############################
 
   subject <- "id"
   Time <- "time"
   data <- expand.grid(id = 1:Ni,
-                     time = Time,
-                     visit = Visit)
+                     time = time)
+  data$visit <- rep(Visit,rep=Ni)
   I <- length(Visit)
   K <- length(outcomes)
 
@@ -555,14 +557,15 @@ if (varcovRE.format == "cholesky"){
 
 res <- NULL
 nRE <- parameters
-for (i in 1:I) {
+for (i in 1:Ni) {
   #cycle over individuals
 
   Y_ij <- NULL
   X_ij_all <- NULL
+  data_i <- NULL
 
-  data_covariate_i <- as.data.frame(cbind(data[i,1 ], cov[i, ]))
-  colnames(data_covariate_i) <- c("id",colnames(cov))
+  data_covariate_i <- as.data.frame(cbind(data[data$id==i,], cov[i, ]))
+  colnames(data_covariate_i) <- c(colnames(data),colnames(cov))
   cols_data_covariate_i <- colnames(data_covariate_i)
   # model matrix?
   out <- create_x0_x_z0_z_modA_mat(
@@ -587,18 +590,20 @@ for (i in 1:I) {
   modA_mat_i <- as.matrix(out$modA_mat)
   # we generate the random effects
   Re <- mvrnorm(n = 1,
-                mu = rep(0, (sum(q) + K)),
+                mu = rep(0, (sum(q) + nD)),
                 Sigma = matD)
 
-  wi <- Re[1:K]
-  ui <- Re[(K + 1):(sum(q) + K)]
+  wi <- Re[1:nD]
+  ui <- Re[(nD + 1):(sum(q) + nD)]
 
   # calcul de X0
   X_ij <- x0i %*% parameters$alpha_mu0 + z0i %*% wi
   X_ij_all <- t(X_ij)
   #measurament errors: allowed K!=ny
-  ny = length(M)
-  eps <- matrix(NA, length(Time), ny)
+  ny <- length(parameters$ParaTransformY$thresholds)
+  
+  eps <- matrix(NA, length(time), ny)
+  Sig <- (parameters$paraSig) ^ 2 * diag(ny)
   eps[1, ] <- mvrnorm(n = 1,
                       mu = rep(0, ny),
                       Sigma = Sig)
@@ -607,7 +612,7 @@ for (i in 1:I) {
   X_ij_1 <- X_ij
 
   Aj_1 <- ConstrA(
-    K = K,
+    K = nD,
     t = 0,
     DeltaT = DeltaT,
     vec_alpha_ij = parameters$vec_alpha_ij,
@@ -617,17 +622,17 @@ for (i in 1:I) {
 
 
   # latent process
-  for (j in 1:(length(Time) - 1)) {
-    # il faut sauter xi[1:K,] qui correspond a xi0
-    X_ij <- DeltaT * xi[(j * K + 1):((j + 1) * K), ] %*% parameters$alpha_mu + DeltaT *
-      zi[(j * K + 1):((j + 1) * K), ] %*% ui + Aj_1 %*% X_ij_1
+  for (j in 1:(length(time) - 1)) {
+    # il faut sauter xi[1:nD,] qui correspond a xi0
+    X_ij <- DeltaT * xi[(j * nD + 1):((j + 1) * nD), ] %*% parameters$alpha_mu + DeltaT *
+      zi[(j * nD + 1):((j + 1) * nD), ] %*% ui + Aj_1 %*% X_ij_1
     eps[j + 1, ] <- mvrnorm(n = 1,
                             mu = rep(0, ny),
-                            Sigma = parameters$paraSig)
+                            Sigma = Sig)
     X_ij_1 <- X_ij
     X_ij_all <- rbind(X_ij_all, t(X_ij))
     Aj_1 <- ConstrA(
-      K = K,
+      K = nD,
       t = j,
       DeltaT = DeltaT,
       vec_alpha_ij = parameters$vec_alpha_ij,
@@ -641,8 +646,8 @@ for (i in 1:I) {
     #ex latent processes
     O_ij_all <- matrix(NA, nrow = nrow(X_ij_all), ncol = max(L))
     for (l in 1:max(L)) {
-      O_ij_all[, l] <- X_ij_all[, L[l]] * w[l]
-    }
+      O_ij_all[, l] <- X_ij_all[, L[l]] * parameters$weights[l]
+    
 
     #transformation
 
@@ -651,7 +656,7 @@ for (i in 1:I) {
 
     for (m in 1:ny) {
       if (links[m] == "linear") {
-        y <- cbind(y, (O_ij_all[, L[m]] + eps[, m]) * parameters$ParaTransformY$paraEtha1[m] + parameters$ParaTransformY$paraEtha0[m])
+        y <- cbind(y, (O_ij_all[, mapping.to.LP2[m]] + eps[, m]) * parameters$ParaTransformY$paraEtha1[m] + parameters$ParaTransformY$paraEtha0[m])
 
       } else if (links[m] == "thresholds") {
         ## passer des parametres aux thresholds
@@ -708,9 +713,10 @@ for (i in 1:I) {
         }
 
         # take the inverse to obtain simulations of Y
-        yk <- sapply(O_ij_all[, L[m]] + eps[, m], transfinv, k = m)
+        yk <- sapply(O_ij_all[, mapping.to.LP2[m]] + eps[, m], transfinv, k = m)
         y <- cbind(y, yk)
       }
+    }
     }
   } else{
     #transformation
@@ -718,7 +724,7 @@ for (i in 1:I) {
 
     for (m in 1:ny) {
       if (links[m] == "linear") {
-        y <- cbind(y, (X_ij_all[, M[m]] + eps[, m]) * parameters$ParaTransformY$paraEtha1[m] + parameters$ParaTransformY$paraEtha0[m])
+        y <- cbind(y, (X_ij_all[, mapping.to.LP[m]] + eps[, m]) * parameters$ParaTransformY$ParaEtha1[m] + parameters$ParaTransformY$ParaEtha0[m])
 
       } else if (links[m] == "thresholds") {
         ## passer des parametres aux thresholds
@@ -727,8 +733,7 @@ for (i in 1:I) {
         })
 
         ##fonction pour passer de H(Y) a Y
-        transfinv <- function(ytilde, k)
-        {
+        transfinv <- function(ytilde, k){
           nam <- names(thresholds2)
           nam <- tolower(nam)
           namk <- substr(nam[k], 1, 6)
@@ -744,7 +749,7 @@ for (i in 1:I) {
             indic <- c(1, rep(0, length(thresholds2[[m]])))
             indic <- indic[order(v)]
             pos <- which(indic == 1)
-            y <- parameters$ParaTransformY$modalites[[m]][pos]
+            y <- parameters$ParaTransformY$modalities[[m]][pos]
           }
 
           if (linktype == 1)
@@ -756,7 +761,7 @@ for (i in 1:I) {
           if (linktype == 2)
             ##splines
           {
-            z <- parameters$ParaTransformY$modalites[[m]] #spline nodes
+            z <- parameters$ParaTransformY$modalities[[m]] #spline nodes
             ff <- function(x, hy, z, b) {
               transfo_spl(x, z, b) - hy
             }
@@ -775,7 +780,7 @@ for (i in 1:I) {
         }
 
         # take the inverse to obtain simulations of Y
-        yk <- sapply(X_ij_all[, M[m]] + eps[, m], transfinv, k = m)
+        yk <- sapply(X_ij_all[, mapping.to.LP[m]] + eps[, m], transfinv, k = m)
         y <- cbind(y, yk)
       }
     }
@@ -786,9 +791,9 @@ for (i in 1:I) {
   colnames(Y_ij) <- paste("Y", 1:ny, sep = "")
   ### data complet
   data_i_cplt <- as.data.frame(cbind(data_covariate_i, Y_ij))
-  data_i_cplt <- data_i_cplt[which(Time %% DeltaTestim == 0), ]
-  data <- rbind(data, data_i_cplt)
-
+  data_i_cplt <- data_i_cplt[which(time %% DeltaVisit == 0), ]
+  data_i <- rbind(data_i, data_i_cplt)
+  data_i$visit <- 1:length(unique(data_i$time))
   nEvent <- length(fixed.survival.models)
   
   
@@ -1057,9 +1062,8 @@ for (i in 1:I) {
     colnames(d) <- c(names(data), "xs", "Tevt", "Status", "Tentry")
     res <- rbind(res, d)
 
-  } else{
-    res <- rbind(res, data)
-  }
+  } 
+  res <- rbind(res, data_i)
 }
 
 return(res)
@@ -1072,7 +1076,7 @@ return(res)
 create_x0_x_z0_z_modA_mat <- function(data, fixed_X0.models, fixed_DeltaX.models, randoms_DeltaX.models, 
                                       randoms_X0.models, mod_trans.model, subject, Time){
   colnames <- colnames(data)
-  tau <- unique(sort(data$Visit))
+  tau <- unique(sort(data$visit))
   nb.outcomes <- length(fixed_DeltaX.models)
   all.Y <- 1:nb.outcomes
   I <- 1
@@ -1089,7 +1093,7 @@ create_x0_x_z0_z_modA_mat <- function(data, fixed_X0.models, fixed_DeltaX.models
   x0 <- NULL
   nb_x0_k <- NULL
   col_k<-list()
-  x0_cov <- x_cov[which(x_cov$Visit==0),]
+  x0_cov <- x_cov[which(x_cov$visit==0),]
   #
   ##
   indY_x0 <- x0_cov$indY_x
@@ -1160,18 +1164,18 @@ create_x0_x_z0_z_modA_mat <- function(data, fixed_X0.models, fixed_DeltaX.models
   
   #===================================================================
   #     # construction des  matrice z0 et z========================
-  data_z_cov <- data[, c(subject,Time,"Visit")]
+  data_z_cov <- data[, c(subject,Time,"visit")]
   z_cov<- NULL
   for(k in 1:nb.outcomes){
     indY_z <- rep(all.Y[k], dim(data_z_cov)[1])
     data_z_cov_i <- cbind(data_z_cov, indY_z)
     z_cov <- rbind(z_cov, data_z_cov_i)
   }
-  z_cov <- z_cov[order(z_cov[,subject],z_cov$Visit ),]
+  z_cov <- z_cov[order(z_cov[,subject],z_cov$visit ),]
   #   z_cov[,Time] <- z_cov[,Time]*DeltaT ######
   
   #### only for z0 ####
-  z0_cov <- z_cov[which(z_cov$Visit==0),]
+  z0_cov <- z_cov[which(z_cov$visit==0),]
   indY_z0 <- z0_cov$indY_z
   z0 <- NULL
   col_k<-list()
