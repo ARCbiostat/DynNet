@@ -179,7 +179,9 @@ simulateDynNet <- function(Ni,
   nD <- length(outcomes_by_LP) # nD: number of latent process
 
   formative <- any(grepl("\\([^)]*[+][^)]*\\)", outcomes_by_LP))
-
+  if(formative & is.null(parameters$weights)){
+    stop("For models with formative structure, weights parameters need to be specified in enter_param()")
+  }
 
   outcomes <- NULL
   mapping.to.LP <- NULL
@@ -641,14 +643,15 @@ for (i in 1:Ni) {
   }
 
   # here it changes with formative model
-
+check_weights <- tapply(parameters$weights,mapping.to.LP2,sum)
+if(any(check_weights!=1)) stop("Weights within outer latent structure need to sum to 1. Revise weights parameters.")
   if (formative) {
     #ex latent processes
-    O_ij_all <- matrix(NA, nrow = nrow(X_ij_all), ncol = max(L))
-    for (l in 1:max(L)) {
-      O_ij_all[, l] <- X_ij_all[, L[l]] * parameters$weights[l]
+    O_ij_all <- matrix(NA, nrow = nrow(X_ij_all), ncol = max(mapping.to.LP2))
+    for (l in 1:max(mapping.to.LP2)) {
+      O_ij_all[, l] <- X_ij_all[, mapping.to.LP2[l]] * parameters$weights[l]
     
-
+}
     #transformation
 
 
@@ -656,7 +659,7 @@ for (i in 1:Ni) {
 
     for (m in 1:ny) {
       if (links[m] == "linear") {
-        y <- cbind(y, (O_ij_all[, mapping.to.LP2[m]] + eps[, m]) * parameters$ParaTransformY$paraEtha1[m] + parameters$ParaTransformY$paraEtha0[m])
+        y <- cbind(y, (O_ij_all[, mapping.to.LP2[m]] + eps[, m]) * parameters$ParaTransformY$ParaEtha1[m] + parameters$ParaTransformY$ParaEtha0[m])
 
       } else if (links[m] == "thresholds") {
         ## passer des parametres aux thresholds
@@ -682,7 +685,7 @@ for (i in 1:Ni) {
             indic <- c(1, rep(0, length(thresholds2[[m]])))
             indic <- indic[order(v)]
             pos <- which(indic == 1)
-            y <- modalites[[m]][pos]
+            y <- parameters$ParaTransformY$modalities[[m]][pos]
           }
 
           if (linktype == 1)
@@ -717,7 +720,7 @@ for (i in 1:Ni) {
         y <- cbind(y, yk)
       }
     }
-    }
+    
   } else{
     #transformation
     y <- NULL

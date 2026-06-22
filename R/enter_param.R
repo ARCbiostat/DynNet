@@ -85,6 +85,7 @@
 #' @param fix.p.asso2 indicator if the parameters \code{p.asso2} are fixed.
 #' @param p.asso.int2 initial values for the interactions between covariates and functions of the latent processes in the second transition model (competing risks setting only). Default to NULL.
 #' @param fix.p.asso.int2 indicator if the parameters \code{p.asso.int2} are fixed.
+#' @param weights vector of weights for formative structure (needed only for simulation mode of the function)
 #' @param get_help logical vector indicating if the dimension of each type of initial values required by the specified model should be printed.Default to FALSE.
 #' @param varcovRE.format character indication format of random effects var/cov matrix parametrization. "cholesky" (default) or "block".
 #' @return A list with the following elements:
@@ -227,6 +228,7 @@ enter_param<-function(structural.model,
                       fix.p.asso2=rep(0,length(p.asso2)),
                       p.asso.int2=NULL,
                       fix.p.asso.int2=rep(0,length(p.asso.int2)),
+                      weights=NULL,
                       get_help=F,
                       varcovRE.format="cholesky"
                       
@@ -420,6 +422,7 @@ enter_param<-function(structural.model,
                   alpha_D=alpha_D, 
                   vec_alpha_ij=transitionmatrix,  
                   paraB=NULL, #check with Anais
+                  weights=weights,
                   paraSig=var.errors, 
                   ParaTransformY=transformationY,
                   para_surv=list(baseline1=baseline1,
