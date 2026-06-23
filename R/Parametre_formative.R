@@ -71,7 +71,8 @@ Parametre_formative <- function(K,
                        names_x0,
                        names_z,
                        names_z0,
-                       names_y) {
+                       names_y,
+                       varcovRE.format="cholesky") {
   cl <- match.call()
   
   #   require(MASS)
@@ -80,7 +81,16 @@ Parametre_formative <- function(K,
   # K = number of outcomes
   #======================================================================================
   
-  nb_paraD = nb_RE * (nb_RE + 1) / 2
+  if(varcovRE.format=="cholesky"){
+    nb_paraD = nb_RE*(nb_RE+1)/2
+  }
+  
+  if(varcovRE.format=="block"){
+    nq <- (nb_RE-nD)/nD
+    # random int + cholesky + rho int +rho int slopes
+    nb_paraD=nD+(nq*(nq+1)/2)*nD+(nD^2-nD)/2+nD*nq
+    
+  }
   indexparaFixeForIden <- NULL
   # if user not specified initial parameters
   
