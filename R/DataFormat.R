@@ -600,13 +600,13 @@ DataFormat <- function(data, subject, fixed_X0.models , randoms_X0.models , fixe
 #' @param interactionY.survival.models specification of interactions in survival models
 #' @param assoc specification of association between longitudinal and survival models
 #' @param truncation boolean for delayed entry
-#'
+#' @param varcovRE.format character indicating how the variance covariance matrix is parameterized: "cholesky" (by default),"correlation" or "block"
 #' @return a list
 
 DataFormat_formative <- function(data, subject, fixed_X0.models , randoms_X0.models , fixed_DeltaX.models, 
                        randoms_DeltaX.models, mod_trans.model, link = NULL, knots = NULL, zitr = NULL, ide = NULL, 
                        outcomes, nD,nL,mapping,mapping2, Time, Survdata = NULL, basehaz = NULL, fixed.survival.models = NULL, 
-                       interactionY.survival.models = NULL, DeltaT, assoc, truncation){
+                       interactionY.survival.models = NULL, DeltaT, assoc, truncation,varcovRE.format = varcovRE.format){
   
   cl <- match.call()
   colnames<-colnames(data)
@@ -902,7 +902,18 @@ DataFormat_formative <- function(data, subject, fixed_X0.models , randoms_X0.mod
   maxY <- tr_Y$maxY
   
   nb_RE <- sum(q0,q)
-  nb_paraD <- nb_RE*(nb_RE+1)/2
+  
+  if(varcovRE.format=="cholesky"){
+    nb_paraD <- nb_RE*(nb_RE+1)/2
+  }
+  
+  if(varcovRE.format=="block"){
+    nq <- (nb_RE-nD)/nD
+    # random int + cholesky + rho int +rho int slopes
+    nb_paraD=nD+(nq*(nq+1)/2)*nD+(nD^2-nD)/2+nD*nq
+    
+  }
+  
   
   #If joint model
   Event <- NULL
