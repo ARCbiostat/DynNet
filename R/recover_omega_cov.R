@@ -208,32 +208,20 @@ recover_omega_cov <- function(Blambda,
   
   #costraints
  
-  BOmega_fixed <- matrix(1, pOmega, pOmega)
+  # zero everything first
+  BOmega_fixed <- matrix(0, pOmega, pOmega)
   
-  # indices in output
-  idx_out_int0 <- seq_len(nL)
-  idx_out_trail_start <- nL + 1L
-  
-  idx_out_int   <- integer(nL)
-  idx_out_slope <- if (!is.null(BOmega_fixed_slope)) integer(nL) else NULL
-  for (l in seq_len(nL)) {
-    base <- idx_out_trail_start + (l - 1L) * nTypes_trailing
-    idx_out_int[l] <- base
-    if (!is.null(BOmega_fixed_slope)) idx_out_slope[l] <- base + 1L
-  }
-  
-  # place same-type blocks
+  # fill ONLY what is allowed
   BOmega_fixed[idx_out_int0, idx_out_int0] <- BOmega_fixed_int0
   BOmega_fixed[idx_out_int,  idx_out_int]  <- BOmega_fixed_int
+  
   if (!is.null(BOmega_fixed_slope)) {
     BOmega_fixed[idx_out_slope, idx_out_slope] <- BOmega_fixed_slope
-    # place cross-type int–slope (same Ω only -> diagonal by Ω)
-    # This is a diagonal matrix in Ω-space, so we map diagonals to (int,slope) pairs
+    
     for (l in seq_len(nL)) {
       tau_ll <- BOmega_fixed_int_slope[l, l]
-        BOmega_fixed[idx_out_int[l], idx_out_slope[l]] <- tau_ll
-        BOmega_fixed[idx_out_slope[l], idx_out_int[l]] <- tau_ll
-      
+      BOmega_fixed[idx_out_int[l], idx_out_slope[l]] <- tau_ll
+      BOmega_fixed[idx_out_slope[l], idx_out_int[l]] <- tau_ll
     }
   }
   
@@ -347,19 +335,87 @@ chol_by_block <- function(BOmega, blocks, adjust_2x2_if_needed = TRUE) {
 # Output:
 #   OmegaConstraint: nL x nL matrix with 1 where corresponding Omega pairs are fixed
 map_lambda_constraint_to_omega <- function(LambdaConstraint, mappingL1L2) {
+  
   nD <- nrow(mappingL1L2)
   nL <- ncol(mappingL1L2)
   OmegaConstraint <- matrix(0, nL, nL)
+  
   for (d in seq_len(nD)) {
     G <- which(abs(mappingL1L2[d, ]) > 0)
-    if (length(G) > 0) {
-      for (d2 in seq_len(nD)) {
-        if (LambdaConstraint[d, d2] == 1) {
-          G2 <- which(abs(mappingL1L2[d2, ]) > 0)
-          OmegaConstraint[G, G2] <- 1
+    
+    for (d2 in seq_len(nD)) {
+      
+      if (LambdaConstraint[d, d2] == 1) {
+        G2 <- which(abs(mappingL1L2[d2, ]) > 0)
+        
+        if (d == d2) {
+         
+          OmegaConstraint[cbind(G, G)] <- 1
+          
+        } else {
+          
+          common <- intersect(G, G2)
+          if (length(common) > 0) {
+            OmegaConstraint[cbind(common, common)] <- 1
+          }
         }
       }
     }
   }
+  
   OmegaConstraint
+}
+
+
+reorder_bytype <- function(B, nD, has_slope = TRUE) {
+  stopifnot(is.matrix(B), nrow(B) == ncol(B))
+  
+  nTypes <- if (has_slope) 3 else 2
+  if (nrow(B) != nD * nTypes) {
+    stop("Dimensions do not match nD * nTypes")
+  }
+  
+  # --- rebuild forward permutation EXACTLY
+  idx_int0 <- 1:nD
+  idx_int  <- (nD + 1):(2 * nD)
+  
+  if (has_slope) {
+    idx_slope <- (2 * nD + 1):(3 * nD)
+    perm_trailing <- as.vector(rbind(idx_int, idx_slope))
+  } else {
+    perm_trailing <- idx_int
+  }
+  
+  perm_forward <- c(idx_int0, perm_trailing)
+  
+ 
+  perm_inv <- order(perm_forward)
+  
+  B_new <- B[perm_inv, perm_inv]
+  B_new
+}
+
+reorder_byprocess <- function(B, nD, has_slope = TRUE) {
+  stopifnot(is.matrix(B), nrow(B) == ncol(B))
+  
+  nTypes <- if (has_slope) 3 else 2
+  if (nrow(B) != nD * nTypes) {
+    stop("Dimensions do not match nD * nTypes")
+  }
+  
+  idx_int0 <- 1:nD
+  idx_int  <- (nD + 1):(2 * nD)
+  
+  if (has_slope) {
+    idx_slope <- (2 * nD + 1):(3 * nD)
+    perm_trailing <- as.vector(rbind(idx_int, idx_slope))
+  } else {
+    perm_trailing <- idx_int
+  }
+  
+  perm <- c(idx_int0, perm_trailing)
+  
+  B_new <- B[perm, perm]
+  attr(B_new, "perm") <- perm  # optional
+  B_new
 }

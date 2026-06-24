@@ -138,7 +138,14 @@ Parametre_formative <- function(K,
     
     #random effects
     alpha_D <- paras.ini$alpha_D
-    alpha_D_matrix <- DparChol(nb_RE,alpha_D)
+    if(varcovRE.format=="chol"){
+      alpha_D_matrix <- DparChol(nb_RE,alpha_D)
+    }
+    
+    if(varcovRE.format=="block"){
+      alpha_D_matrix <-DparBlock(nD,(nb_RE-nD)/nD,alpha_D)
+    }
+    
     
     RE_z0 <- as.integer(sub("\\(.*\\)", "", names_z0))
     RE_z <- as.integer(sub("\\(.*\\)", "", names_z))
@@ -290,40 +297,183 @@ Parametre_formative <- function(K,
   
   indexFixe_alpha_D <- rep(0,length(alpha_D))
   indexFixe_alpha_D[indexparaFixeUser$alpha_D] <- 1
-  indexFixe_alpha_D_matrix <- DparChol(nb_RE,indexFixe_alpha_D)
   
-  #alpha_D
-  alpha_D_matrix_trans <- recover_omega_cov(
-    Blambda   = alpha_D_matrix,
-    Blambda_fixed = indexFixe_alpha_D_matrix,
-    mappingL1L2   = mappingLP2LP1_weights,
-    method        = "structured",
-    rho_int0       = 0,
-    rho_int       = 0,
-    rho_slope     = 0
-  )
-  nb_paraD <- nrow(alpha_D_matrix_trans[[1]])*(nrow(alpha_D_matrix_trans[[1]])+1)/2 
-  # print("nb_paraD")
-  # print(nb_paraD)
-  reps <- length(row.names(alpha_D_matrix_trans[[1]])[-c(1:nL)])/nL
-  blocks <- c(1:nL,rep(apply(mappingLP2LP1,1,function(x)which(x!=0)),times=reps)+(nL+1))
-  #chol_D_block <- chol_by_block(alpha_D_matrix_trans[[1]],blocks = blocks) I can't do it because it is not consistent with C++
-  # print("original")
-  # print(alpha_D_matrix_trans[[1]])
-  chol_D <- t(chol(alpha_D_matrix_trans[[1]]))
-  # print("chol")
-  # print(chol_D)
-  alpha_D_trans <- as.numeric(chol_D[lower.tri(chol_D, diag = TRUE)])
-  # print("numeric version")
-  # print(alpha_D_trans)
-  #check
-  # print("check transformation")
-  # print(identical(DparChol(nrow(alpha_D_matrix_trans[[1]]),alpha_D_trans),alpha_D_matrix_trans[[1]]))
-  # print(DparChol(nrow(alpha_D_matrix_trans[[1]]),alpha_D_trans))
-  # print(alpha_D_matrix_trans[[1]])
-  indexFixe_alpha_D_trans_matrix <- alpha_D_matrix_trans[[2]]
-  indexFixe_alpha_D_matrix <- indexFixe_alpha_D_trans_matrix[lower.tri(indexFixe_alpha_D_trans_matrix, diag = TRUE)]
-  indexFixe_alpha_D_trans <- which(indexFixe_alpha_D_matrix==1)
+  if(varcovRE.format=="chol"){
+    indexFixe_alpha_D_matrix <- DparChol(nb_RE,indexFixe_alpha_D)
+    
+    
+     #alpha_D
+    alpha_D_matrix_trans <- recover_omega_cov(
+      Blambda   = alpha_D_matrix,
+      Blambda_fixed = indexFixe_alpha_D_matrix,
+      mappingL1L2   = mappingLP2LP1_weights,
+      method        = "structured",
+      rho_int0       = 0,
+      rho_int       = 0,
+      rho_slope     = 0
+    )
+    
+    reps <- length(row.names(alpha_D_matrix_trans[[1]])[-c(1:nL)])/nL
+    blocks <- c(1:nL,rep(apply(mappingLP2LP1,1,function(x)which(x!=0)),times=reps)+(nL+1))
+    print(reps)
+    print(blocks)
+    
+    nb_paraD <- nrow(alpha_D_matrix_trans[[1]])*(nrow(alpha_D_matrix_trans[[1]])+1)/2 
+    
+
+    
+    #chol_D_block <- chol_by_block(alpha_D_matrix_trans[[1]],blocks = blocks) I can't do it because it is not consistent with C++
+    # print("original")
+    # print(alpha_D_matrix_trans[[1]])
+    chol_D <- t(chol(alpha_D_matrix_trans[[1]]))
+    # print("chol")
+    # print(chol_D)
+    alpha_D_trans <- as.numeric(chol_D[lower.tri(chol_D, diag = TRUE)])
+    # print("numeric version")
+    # print(alpha_D_trans)
+    #check
+    # print("check transformation")
+    # print(identical(DparChol(nrow(alpha_D_matrix_trans[[1]]),alpha_D_trans),alpha_D_matrix_trans[[1]]))
+    # print(DparChol(nrow(alpha_D_matrix_trans[[1]]),alpha_D_trans))
+    # print(alpha_D_matrix_trans[[1]])
+    
+    
+    
+    indexFixe_alpha_D_trans_matrix <- alpha_D_matrix_trans[[2]]
+    indexFixe_alpha_D_matrix <- indexFixe_alpha_D_trans_matrix[lower.tri(indexFixe_alpha_D_trans_matrix, diag = TRUE)]
+    indexFixe_alpha_D_trans <- which(indexFixe_alpha_D_matrix==1)
+    
+  }
+  
+  
+  
+  if(varcovRE.format=="block"){
+    indexFixe_alpha_D_matrix <- DparBlock(nD,(nb_RE-nD)/nD,indexFixe_alpha_D)
+    has_slope <- ifelse(nrow(alpha_D_matrix)>nD*2,TRUE,FALSE)
+    if(nrow(alpha_D_matrix)>(nD*3)){
+      stop("Random effects with a non-linear effect of time are currently not implemented")
+    }
+    #alpha_D
+    alpha_D_matrix_trans <- recover_omega_cov(
+      Blambda   = reorder_bytype(alpha_D_matrix,nD=nD,has_slope=has_slope) ,
+      Blambda_fixed = indexFixe_alpha_D_matrix,
+      mappingL1L2   = mappingLP2LP1_weights,
+      method        = "structured",
+      rho_int0       = 0,
+      rho_int       = 0,
+      rho_slope     = 0
+    )
+    nq <- (nrow(alpha_D_matrix_trans[[1]])-nL)/nL
+    # random int + cholesky + rho int +rho int slopes
+    nb_paraD=nL+(nq*(nq+1)/2)*nL+(nL^2-nL)/2+nL*nq
+    
+    # change order by process
+    alpha_D_matrix_trans_byp <- reorder_byprocess(alpha_D_matrix_trans[[1]],nL,has_slope=has_slope)
+    
+    var.int <- diag(attr(alpha_D_matrix_trans[[1]],"components")$BOmega_int0)
+    varcovRE.time <-lapply(seq_len(nL), function(d) {
+        
+        if (has_slope) {
+          base <- nL + 2*(d - 1)
+          idx <- c(base + 1, base + 2)   # int_d, slope_d
+        } else {
+          idx <- nL + d                  # int_d only
+        }
+        
+      alpha_D_matrix_trans_byp[idx, idx, drop = FALSE]
+      })
+    
+    rho.int <- sapply(seq_len(nL), function(l) {
+      
+      idx_int0 <- l
+      
+      idx_int <- if (has_slope) {
+        nL + 2*(l - 1) + 1
+      } else {
+        nL + l
+      }
+      
+      cov_ <- alpha_D_matrix_trans_byp[idx_int0, idx_int]
+      var0 <- alpha_D_matrix_trans_byp[idx_int0, idx_int0]
+      var1 <- alpha_D_matrix_trans_byp[idx_int,  idx_int]
+      
+      
+      cov_ / sqrt(var0 * var1)
+    })
+    
+    rho.int.time <-  sapply(seq_len(nL), function(l) {
+        
+        idx_int0 <- l
+        
+        idx_int <- if (has_slope) {
+          nL + 2*(l - 1) + 1
+        } else {
+          nL + l
+        }
+        
+        cov_ <- alpha_D_matrix_trans_byp[idx_int0, idx_int]
+        var0 <- alpha_D_matrix_trans_byp[idx_int0, idx_int0]
+        var1 <- alpha_D_matrix_trans_byp[idx_int,  idx_int]
+        
+        cov_ / sqrt(var0 * var1)
+      })
+      
+     
+    varcovRE.time.chol <- lapply(varcovRE.time, function(x) t(chol(x))[lower.tri(t(chol(x)),diag = T)])
+    alpha_D_trans <- c(var.int,unlist(varcovRE.time.chol),inv_rho(rho.int),unlist(lapply(rho.int.time,function(x)inv_rho(x))))
+    print(length(alpha_D_trans))
+    
+    
+    indexFixe_alpha_D_trans_matrix_byp <- reorder_byprocess(alpha_D_matrix_trans[[2]],nL,has_slope=has_slope)
+    
+    var.int.fix <- diag(alpha_D_matrix_trans[[2]][1:nL,1:nL])
+    varcovRE.time.fix <-lapply(seq_len(nL), function(d) {
+      
+      if (has_slope) {
+        base <- nL + 2*(d - 1)
+        idx <- c(base + 1, base + 2)   # int_d, slope_d
+      } else {
+        idx <- nL + d                  # int_d only
+      }
+      
+      indexFixe_alpha_D_trans_matrix_byp[idx, idx, drop = FALSE]
+    })
+    
+    rho.int.fix <- sapply(seq_len(nL), function(l) {
+      
+      idx_int0 <- l
+      
+      idx_int <- if (has_slope) {
+        nL + 2*(l - 1) + 1
+      } else {
+        nL + l
+      }
+      
+      indexFixe_alpha_D_trans_matrix_byp[idx_int0, idx_int]
+      
+    })
+    
+    rho.int.time.fix <-  sapply(seq_len(nL), function(l) {
+      
+      idx_int0 <- l
+      
+      idx_int <- if (has_slope) {
+        nL + 2*(l - 1) + 1
+      } else {
+        nL + l
+      }
+      
+      indexFixe_alpha_D_trans_matrix_byp[idx_int0, idx_int]
+      
+    })
+    
+   
+    
+    indexFixe_alpha_D_trans <-c(var.int.fix,
+                                unlist(lapply(varcovRE.time.fix, function(x) as.numeric(x[lower.tri(x,diag = T)]))),
+                                rho.int.fix,
+                                rho.int.time.fix)
+  }
   
   #vec_alpha_ij
   vec_alpha_ij_trans <-as.vector(t(invert_vec_alpha_ij(matrix(vec_alpha_ij,nrow=nD,byrow = T),mappingLP2LP1_weights)))

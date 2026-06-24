@@ -2,7 +2,7 @@ Loglik_formative <- function(K , nD, mapping,nL,mapping2, paraOpt,  paraFixe , p
                              sequence , type_int , ind_seq_i, MCnr , nmes ,
                              m_is , Mod_MatrixY , Mod_MatrixYprim , df,
                              x , z , q , nb_paraD ,
-                             x0 , z0 , q0 , cholesky ,
+                             x0 , z0 , q0 , varcov_format ,
                              data_surv , data_surv_intY , nYsurv , basehaz , knots_surv, 
                              np_surv , survival , assoc , truncation, 
                              nE, Xsurv1 , Xsurv2 ,
