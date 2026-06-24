@@ -84,7 +84,7 @@ Loglik_formative <- function(K , nD, mapping,nL,mapping2, paraOpt,  paraFixe , p
     x0 = as.matrix(x0),
     z0 = as.matrix(z0),
     q0 = q0,
-    cholesky = cholesky,
+    varcov_format=varcov_format,
     data_surv = data_surv,
     data_surv_intY = data_surv_intY,
     nYsurv = nYsurv,
