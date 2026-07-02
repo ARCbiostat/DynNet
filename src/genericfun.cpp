@@ -1697,7 +1697,7 @@ inline mat chol_to_cov(int q, const vec &params, uword &k) {
 // Using rho = tanh(eta / 2) for numerical stability.
 // Optionally clipped to avoid exactly ±1 due to roundoff.
 inline double eta_to_rho(double eta) {
-  double rho = std::tanh(eta * 0.5);
+  double rho = std::tanh(eta);
   const double eps = 1e-12;
   if (rho >= 1.0) rho = 1.0 - eps;
   if (rho <= -1.0) rho = -1.0 + eps;
@@ -1714,7 +1714,7 @@ inline double eta_to_rho(double eta) {
  *     RE_{proc nD} (nq) ].
  *
  * Parameter layout (generalizing your example), LENGTH:
- *   A) sd_intercepts:                          length nD                (SDs, not variances)
+ *   A) var_intercepts:                          length nD                
  *   B) For d=1..nD: Ld (nq x nq, lower-tri):   length nD * [nq(nq+1)/2] (per-process RE via Cholesky)
  *   C) Intercept cross-terms (i>j), as ETA:    length nD(nD-1)/2        (lower-tri by columns)
  *      -> We transform: rho = tanh(eta/2), then cov = rho * sd_i * sd_j
@@ -1759,12 +1759,12 @@ arma::mat DparBlock(int nD, int nq, const arma::vec &par) {
   mat D = zeros<mat>(Q, Q);
   uword k = 0;
   
-  // A) Intercept SDs and variances on the diagonal; store SDs for later use
+  // A) Intercept S variances on the diagonal; store SDs for later use
   vec sd0(nD);
   for (int i = 0; i < nD; ++i) {
-    double sd = par[k++];
-    sd0[i] = sd;
-    D(i, i) = sd * sd;
+    double var = par[k++];
+    sd0[i] = std::sqrt(var);
+    D(i, i) = var;
   }
   
   // B) RE blocks via Cholesky; also store per-RE SDs (sqrt of variances) for scaling etas in D)
