@@ -4,7 +4,7 @@
 \alias{get_opt_formative}
 \title{Recover Lambda-scale parameters and formative weights after optimization}
 \usage{
-get_opt_formative(b, paras_block_dim, mapping, mapping2, nRE)
+get_opt_formative(b, paras_block_dim, mapping, mapping2, nRE, varcovRE.format)
 }
 \arguments{
 \item{paras_block_dim}{vector giving the sizes of parameter blocks}

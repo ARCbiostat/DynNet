@@ -43,6 +43,7 @@ enter_param(
   fix.p.asso2 = rep(0, length(p.asso2)),
   p.asso.int2 = NULL,
   fix.p.asso.int2 = rep(0, length(p.asso.int2)),
+  weights = NULL,
   get_help = F,
   varcovRE.format = "cholesky"
 )
@@ -163,6 +164,8 @@ enter_param(
 \item{p.asso.int2}{initial values for the interactions between covariates and functions of the latent processes in the second transition model (competing risks setting only). Default to NULL.}
 
 \item{fix.p.asso.int2}{indicator if the parameters \code{p.asso.int2} are fixed.}
+
+\item{weights}{vector of weights for formative structure (needed only for simulation mode of the function)}
 
 \item{get_help}{logical vector indicating if the dimension of each type of initial values required by the specified model should be printed.Default to FALSE.}
 

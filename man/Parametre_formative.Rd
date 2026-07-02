@@ -38,7 +38,8 @@ Parametre_formative(
   names_x0,
   names_z,
   names_z0,
-  names_y
+  names_y,
+  varcovRE.format = "cholesky"
 )
 }
 \arguments{

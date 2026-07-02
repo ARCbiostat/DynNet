@@ -138,12 +138,14 @@ Parametre_formative <- function(K,
     
     #random effects
     alpha_D <- paras.ini$alpha_D
-    if(varcovRE.format=="chol"){
+    if(varcovRE.format=="cholesky"){
       alpha_D_matrix <- DparChol(nb_RE,alpha_D)
+     
     }
     
     if(varcovRE.format=="block"){
       alpha_D_matrix <-DparBlock(nD,(nb_RE-nD)/nD,alpha_D)
+      print(alpha_D_matrix)
     }
     
     
@@ -214,17 +216,6 @@ Parametre_formative <- function(K,
     p <- p + ncolMod.MatrixY
     
     
-    # Weigths for formative structural model
-    
-    mappingLP2LP1 <- pmin(table(mapping.to.LP2, mapping.to.LP), 1)
-    map_p$weights <- rep(as.integer(colnames(mappingLP2LP1)), times =
-                           as.numeric(apply(mappingLP2LP1, 2, sum)))
-    names(map_p$weights) <- paste0("para_weights", 1:length(map_p$weights))
-    para_weights <- unlist(tapply(rep(1,nL), map_p$weights, function(x) x / sum(x)))
-    
-    mappingLP2LP1_weights <- mappingLP2LP1 * para_weights
-    
-    
   #Survival
   knots_surv <- c(0,0)
   para_surv <- paras.ini$para_surv
@@ -244,6 +235,22 @@ Parametre_formative <- function(K,
     
   }
   
+  
+  W_raw <- matrix(0, nrow=nD, ncol=nL)
+  for(d in 1:nD){
+    idx <- which(mappingLP2LP1[,d] == 1)
+    k <- length(idx)
+    if(k > 0){
+      w <- runif(k, 0.1, 1)   # enforce imbalance
+      w <- w / sum(w)
+      W_raw[d, idx] <- w
+    }
+  }
+  
+  print("initial weights")
+  print(W_raw)
+  
+  para_weights <- apply(W_raw,2,sum)
   #final vector of initial parameters
   paras <- c(
     alpha_mu0,
@@ -253,329 +260,29 @@ Parametre_formative <- function(K,
     paraB,
     paraSig,
     ParaTransformY,
-    para_weights,
-    para_surv
+    para_surv,
+    para_weights
   )
-  
- 
   
   if(!is.null(paras.ini)){
-    if( length(paras) != (p+nL) ){
+    if( length(paras) != p ){
       stop("The length of paras.ini is not correct.")
-  }}
-  
-  # here I start transforming parameters
-  
-  #alpha_mu0
-
-  alpha_mu0_trans <- unlist(lapply(1:nD,function(x)lapply(para_weights[map_p$weights==x],function(l)alpha_mu0[map_p$alpha_mu0==x]*l)))
+    }}
   
   
-  if(length(indexparaFixeUser$alpha_mu0)!=0){
-  mapping_par <- match(names(alpha_mu0_trans), names(alpha_mu0))
-  
-  indexFixe_alpha_mu0_trans <- unlist(lapply(indexparaFixeUser$alpha_mu0,function(x)which(mapping_par==x)))
-  paraFixe_alpha_mu0_trans <- alpha_mu0_trans[indexFixe_alpha_mu0_trans]
-  }else{
-    indexFixe_alpha_mu0_trans <- NULL
-    paraFixe_alpha_mu0_trans <- NULL
-  }
-  
-  #alpha_mu
- 
-  alpha_mu_trans <- unlist(lapply(1:nD,function(x)lapply(para_weights[map_p$weights==x],function(l)alpha_mu[map_p$alpha_mu==x]*l)))
-  
-  if(length(indexparaFixeUser$alpha_mu)!=0){
-    mapping_par <- match(names(alpha_mu_trans), names(alpha_mu))
-    
-    indexFixe_alpha_mu_trans <- unlist(lapply(indexparaFixeUser$alpha_mu,function(x)which(mapping_par==x)))
-    paraFixe_alpha_mu_trans <- alpha_mu0_trans[indexFixe_alpha_mu_trans]
-  }else{
-    indexFixe_alpha_mu_trans <- NULL
-    paraFixe_alpha_mu_trans <- NULL
-  }
-  
-  indexFixe_alpha_D <- rep(0,length(alpha_D))
-  indexFixe_alpha_D[indexparaFixeUser$alpha_D] <- 1
-  
-  if(varcovRE.format=="chol"){
-    indexFixe_alpha_D_matrix <- DparChol(nb_RE,indexFixe_alpha_D)
-    
-    
-     #alpha_D
-    alpha_D_matrix_trans <- recover_omega_cov(
-      Blambda   = alpha_D_matrix,
-      Blambda_fixed = indexFixe_alpha_D_matrix,
-      mappingL1L2   = mappingLP2LP1_weights,
-      method        = "structured",
-      rho_int0       = 0,
-      rho_int       = 0,
-      rho_slope     = 0
-    )
-    
-    reps <- length(row.names(alpha_D_matrix_trans[[1]])[-c(1:nL)])/nL
-    blocks <- c(1:nL,rep(apply(mappingLP2LP1,1,function(x)which(x!=0)),times=reps)+(nL+1))
-    print(reps)
-    print(blocks)
-    
-    nb_paraD <- nrow(alpha_D_matrix_trans[[1]])*(nrow(alpha_D_matrix_trans[[1]])+1)/2 
-    
-
-    
-    #chol_D_block <- chol_by_block(alpha_D_matrix_trans[[1]],blocks = blocks) I can't do it because it is not consistent with C++
-    # print("original")
-    # print(alpha_D_matrix_trans[[1]])
-    chol_D <- t(chol(alpha_D_matrix_trans[[1]]))
-    # print("chol")
-    # print(chol_D)
-    alpha_D_trans <- as.numeric(chol_D[lower.tri(chol_D, diag = TRUE)])
-    # print("numeric version")
-    # print(alpha_D_trans)
-    #check
-    # print("check transformation")
-    # print(identical(DparChol(nrow(alpha_D_matrix_trans[[1]]),alpha_D_trans),alpha_D_matrix_trans[[1]]))
-    # print(DparChol(nrow(alpha_D_matrix_trans[[1]]),alpha_D_trans))
-    # print(alpha_D_matrix_trans[[1]])
-    
-    
-    
-    indexFixe_alpha_D_trans_matrix <- alpha_D_matrix_trans[[2]]
-    indexFixe_alpha_D_matrix <- indexFixe_alpha_D_trans_matrix[lower.tri(indexFixe_alpha_D_trans_matrix, diag = TRUE)]
-    indexFixe_alpha_D_trans <- which(indexFixe_alpha_D_matrix==1)
-    
-  }
-  
-  
-  
-  if(varcovRE.format=="block"){
-    indexFixe_alpha_D_matrix <- DparBlock(nD,(nb_RE-nD)/nD,indexFixe_alpha_D)
-    has_slope <- ifelse(nrow(alpha_D_matrix)>nD*2,TRUE,FALSE)
-    if(nrow(alpha_D_matrix)>(nD*3)){
-      stop("Random effects with a non-linear effect of time are currently not implemented")
-    }
-    #alpha_D
-    alpha_D_matrix_trans <- recover_omega_cov(
-      Blambda   = reorder_bytype(alpha_D_matrix,nD=nD,has_slope=has_slope) ,
-      Blambda_fixed = indexFixe_alpha_D_matrix,
-      mappingL1L2   = mappingLP2LP1_weights,
-      method        = "structured",
-      rho_int0       = 0,
-      rho_int       = 0,
-      rho_slope     = 0
-    )
-    nq <- (nrow(alpha_D_matrix_trans[[1]])-nL)/nL
-    # random int + cholesky + rho int +rho int slopes
-    nb_paraD=nL+(nq*(nq+1)/2)*nL+(nL^2-nL)/2+nL*nq
-    
-    # change order by process
-    alpha_D_matrix_trans_byp <- reorder_byprocess(alpha_D_matrix_trans[[1]],nL,has_slope=has_slope)
-    
-    var.int <- diag(attr(alpha_D_matrix_trans[[1]],"components")$BOmega_int0)
-    varcovRE.time <-lapply(seq_len(nL), function(d) {
-        
-        if (has_slope) {
-          base <- nL + 2*(d - 1)
-          idx <- c(base + 1, base + 2)   # int_d, slope_d
-        } else {
-          idx <- nL + d                  # int_d only
-        }
-        
-      alpha_D_matrix_trans_byp[idx, idx, drop = FALSE]
-      })
-    
-    rho.int <- sapply(seq_len(nL), function(l) {
-      
-      idx_int0 <- l
-      
-      idx_int <- if (has_slope) {
-        nL + 2*(l - 1) + 1
-      } else {
-        nL + l
-      }
-      
-      cov_ <- alpha_D_matrix_trans_byp[idx_int0, idx_int]
-      var0 <- alpha_D_matrix_trans_byp[idx_int0, idx_int0]
-      var1 <- alpha_D_matrix_trans_byp[idx_int,  idx_int]
-      
-      
-      cov_ / sqrt(var0 * var1)
-    })
-    
-    rho.int.time <-  sapply(seq_len(nL), function(l) {
-        
-        idx_int0 <- l
-        
-        idx_int <- if (has_slope) {
-          nL + 2*(l - 1) + 1
-        } else {
-          nL + l
-        }
-        
-        cov_ <- alpha_D_matrix_trans_byp[idx_int0, idx_int]
-        var0 <- alpha_D_matrix_trans_byp[idx_int0, idx_int0]
-        var1 <- alpha_D_matrix_trans_byp[idx_int,  idx_int]
-        
-        cov_ / sqrt(var0 * var1)
-      })
-      
-     
-    varcovRE.time.chol <- lapply(varcovRE.time, function(x) t(chol(x))[lower.tri(t(chol(x)),diag = T)])
-    alpha_D_trans <- c(var.int,unlist(varcovRE.time.chol),inv_rho(rho.int),unlist(lapply(rho.int.time,function(x)inv_rho(x))))
-    print(length(alpha_D_trans))
-    
-    
-    indexFixe_alpha_D_trans_matrix_byp <- reorder_byprocess(alpha_D_matrix_trans[[2]],nL,has_slope=has_slope)
-    
-    var.int.fix <- diag(alpha_D_matrix_trans[[2]][1:nL,1:nL])
-    varcovRE.time.fix <-lapply(seq_len(nL), function(d) {
-      
-      if (has_slope) {
-        base <- nL + 2*(d - 1)
-        idx <- c(base + 1, base + 2)   # int_d, slope_d
-      } else {
-        idx <- nL + d                  # int_d only
-      }
-      
-      indexFixe_alpha_D_trans_matrix_byp[idx, idx, drop = FALSE]
-    })
-    
-    rho.int.fix <- sapply(seq_len(nL), function(l) {
-      
-      idx_int0 <- l
-      
-      idx_int <- if (has_slope) {
-        nL + 2*(l - 1) + 1
-      } else {
-        nL + l
-      }
-      
-      indexFixe_alpha_D_trans_matrix_byp[idx_int0, idx_int]
-      
-    })
-    
-    rho.int.time.fix <-  sapply(seq_len(nL), function(l) {
-      
-      idx_int0 <- l
-      
-      idx_int <- if (has_slope) {
-        nL + 2*(l - 1) + 1
-      } else {
-        nL + l
-      }
-      
-      indexFixe_alpha_D_trans_matrix_byp[idx_int0, idx_int]
-      
-    })
-    
-   
-    
-    indexFixe_alpha_D_trans <-c(var.int.fix,
-                                unlist(lapply(varcovRE.time.fix, function(x) as.numeric(x[lower.tri(x,diag = T)]))),
-                                rho.int.fix,
-                                rho.int.time.fix)
-  }
-  
-  #vec_alpha_ij
-  vec_alpha_ij_trans <-as.vector(t(invert_vec_alpha_ij(matrix(vec_alpha_ij,nrow=nD,byrow = T),mappingLP2LP1_weights)))
-  indexFixe_vec_alpha_ij_trans <- if(length(indexparaFixeUser$vec_alpha_ij)>0)map_fixed_lambda_to_omega(indexparaFixeUser$vec_alpha_ij,mappingLP2LP1)else integer(0)
-  
-  paras_trans <- c(
-    alpha_mu0_trans,
-    alpha_mu_trans,
-    alpha_D_trans,
-    vec_alpha_ij_trans,
-    paraB,
-    paraSig,
-    ParaTransformY,
-    para_surv
-  )
-  
-  paras_trans_length <- unlist(lapply(list(
-    alpha_mu0_trans,
-    alpha_mu_trans,
-    alpha_D_trans,
-    vec_alpha_ij_trans,
+  paras_length <- unlist(lapply(list(
+    alpha_mu0,
+    alpha_mu,
+    alpha_D,
+    vec_alpha_ij,
     paraB,
     paraSig,
     ParaTransformY,
     para_surv
   ), length))
-  
-  indexparaFixeUser_trans <- c(indexFixe_alpha_mu0_trans,
-                               indexFixe_alpha_mu_trans,
-                               indexFixe_alpha_D_trans,
-                               indexFixe_vec_alpha_ij_trans,
-                               indexparaFixeUser$paraB,
-                               indexparaFixeUser$paraSig,
-                               indexparaFixeUser$ParaTransformY,
-                               indexparaFixeUser$para_surv)
-  
-  
-  paraFixeUser_trans <- c(alpha_mu0_trans[indexFixe_alpha_mu0_trans],
-                          alpha_mu_trans[indexFixe_alpha_mu_trans],
-                          alpha_D_trans[indexFixe_alpha_D_trans],
-                          vec_alpha_ij_trans[indexFixe_vec_alpha_ij_trans],
-                          paraFixeUser$paraB,
-                          paraFixeUser$paraSig,
-                          paraFixeUser$ParaTransformY,
-                          paraFixeUser$para_surv)
-  
-  
-  indexparaFixeUser_trans <- c(indexFixe_alpha_mu0_trans,
-                               indexFixe_alpha_mu_trans+paras_trans_length[1],
-                               indexFixe_alpha_D_trans+sum(paras_trans_length[1:2]),
-                               indexFixe_vec_alpha_ij_trans+sum(paras_trans_length[1:3]),
-                               indexparaFixeUser$paraB+sum(paras_trans_length[1:4]),
-                               indexparaFixeUser$paraSig+sum(paras_trans_length[1:5]),
-                               indexparaFixeUser$ParaTransformY+sum(paras_trans_length[1:6]),
-                               indexparaFixeUser$para_surv+sum(paras_trans_length[1:7]))
-  
-
-  #initialisation
-  #   paraOpt <- paras
-  posfix <- rep(0, length(paras_trans)) # 0 = non fixe 1 = fixe # initialisation
-  # constraining of parameters==============
-  indexFixe <- indexparaFixeForIden # not used
-  
-  if (!is.null(indexparaFixeUser_trans)) {
-    
-    indexFixe <- sort(unique(c(indexFixe, indexparaFixeUser_trans)))
-  }
-  paraFixe <- rep(NA, length(posfix))
-  if (!is.null(paraFixeUser_trans)) {
-    paraFixe[c(indexparaFixeUser_trans)] <- paraFixeUser_trans
-  }
-  
-  #not used
-  # paraFixe[index_paraFixe_mu0_constraint] <- rep(0, K)
-  # paraFixe[index_paraFixeDconstraint] <- rep(1, K)
-  if (sum(!is.na(paraFixe)) == 0) {
-    paraFixe = -1
-    paraOpt <- paras_trans
-  } else{
-    paraFixe <- paraFixe[!is.na(paraFixe)]
-    posfix[indexFixe] <- 1 # fixation des paras d'indexes dans indexparaFixe
-    paras_trans[indexFixe] <- paraFixe
-    paraOpt <- paras_trans[-indexFixe]
-  }
-  
-  # print("Final check parametre formative")
-  # print("paras")
-  # print(paras_trans)
-  # print(length(paras_trans))
-  # 
-  # print("paraOpt")
-  # print(paraOpt)
-  # print(length(paraOpt))
-  # 
-  # print("paraFixe")
-  # print(paraFixe)
-  # print(length(paraFixe))
-  
-  
   return(
     list(
-      para = paras_trans,
+      para = paras,
       paraOpt = paraOpt,
       paraFixe = paraFixe,
       posfix = posfix,
@@ -586,8 +293,7 @@ Parametre_formative <- function(K,
       assoc = assoc,
       truncation = truncation,
       nb_paraD= nb_paraD,
-      nRE=nrow(alpha_D_matrix_trans[[1]]),
-      paras_block_dim=paras_trans_length
+      paras_length=paras_length
     )
   )
 }

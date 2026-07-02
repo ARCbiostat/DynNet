@@ -28,7 +28,8 @@ DataFormat_formative(
   interactionY.survival.models = NULL,
   DeltaT,
   assoc,
-  truncation
+  truncation,
+  varcovRE.format = varcovRE.format
 )
 }
 \arguments{
@@ -77,6 +78,8 @@ the temporal influences between latent processes}
 \item{assoc}{specification of association between longitudinal and survival models}
 
 \item{truncation}{boolean for delayed entry}
+
+\item{varcovRE.format}{character indicating how the variance covariance matrix is parameterized: "cholesky" (by default),"correlation" or "block"}
 }
 \value{
 a list
