@@ -235,7 +235,7 @@ Parametre_formative <- function(K,
     
   }
   
-  
+  mappingLP2LP1 <- pmin(table(mapping.to.LP2, mapping.to.LP), 1)
   W_raw <- matrix(0, nrow=nD, ncol=nL)
   for(d in 1:nD){
     idx <- which(mappingLP2LP1[,d] == 1)
@@ -265,7 +265,7 @@ Parametre_formative <- function(K,
   )
   
   if(!is.null(paras.ini)){
-    if( length(paras) != p ){
+    if( length(paras) != p+nL){
       stop("The length of paras.ini is not correct.")
     }}
   
@@ -278,8 +278,63 @@ Parametre_formative <- function(K,
     paraB,
     paraSig,
     ParaTransformY,
-    para_surv
+    para_surv,
+    para_weights
   ), length))
+  
+  
+  
+  
+  indexparaFixeUser2 <- c(
+    indexparaFixeUser$alpha_mu0,
+    indexparaFixeUser$alpha_mu + paras_length[1],
+    indexparaFixeUser$alpha_D + sum(paras_length[1:2]),
+    indexparaFixeUser$vec_alpha_ij_trans + sum(paras_length[1:3]),
+    indexparaFixeUser$paraB + sum(paras_length[1:4]),
+    indexparaFixeUser$paraSig + sum(paras_length[1:5]),
+    indexparaFixeUser$ParaTransformY + sum(paras_length[1:6]),
+    indexparaFixeUser$para_surv + sum(paras_length[1:7])
+  )
+  
+  
+  paraFixeUser <- c(alpha_mu0[indexparaFixeUser$alpha_mu0],
+                          alpha_mu[indexparaFixeUser$alpha_mu],
+                          alpha_D[indexparaFixeUser$alpha_D],
+                          vec_alpha_ij[indexparaFixeUser$vec_alpha_ij],
+                          paraB[indexparaFixeUser$paraB],
+                          paraSig[indexparaFixeUser$paraSig],
+                          ParaTransformY[indexparaFixeUser$ParaTransformY],
+                          para_surv[indexparaFixeUser$para_surv])
+  
+  indexparaFixeUser <- indexparaFixeUser2
+  
+  
+  #initialisation
+  #   paraOpt <- paras
+  posfix <- rep(0,length(paras)) # 0 = non fixe 1 = fixe # initialisation
+  # constraining of parameters==============
+  indexFixe <- indexparaFixeForIden
+  if(!is.null(indexparaFixeUser)){
+    if(length(indexparaFixeUser) != length(paraFixeUser)){
+      stop("The length of paraFixe does not correspond with the length of indexparaFixe")
+    }
+    indexFixe <- sort(unique(c(indexFixe,indexparaFixeUser)))
+  }
+  paraFixe <- rep(NA, length(posfix))
+  if(!is.null(paraFixeUser)){
+    paraFixe[c(indexparaFixeUser)]<- paraFixeUser
+  }
+  paraFixe[index_paraFixe_mu0_constraint]<- rep(0,K)
+  paraFixe[index_paraFixeDconstraint]<- rep(1,K)
+  if(sum(!is.na(paraFixe))==0){
+    paraFixe = -1
+    paraOpt <- paras
+  }else{
+    paraFixe <- paraFixe[!is.na(paraFixe)]
+    posfix[indexFixe] <- 1 # fixation des paras d'indexes dans indexparaFixe
+    paras[indexFixe] <- paraFixe
+    paraOpt <- paras[-indexFixe]
+  }
   return(
     list(
       para = paras,
@@ -293,7 +348,8 @@ Parametre_formative <- function(K,
       assoc = assoc,
       truncation = truncation,
       nb_paraD= nb_paraD,
-      paras_length=paras_length
+      paras_length=paras_length,
+      map_p=map_p
     )
   )
 }

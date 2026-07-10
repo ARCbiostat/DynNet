@@ -153,6 +153,7 @@ if(!is.null(nL)){
       DeltaT,
       ii = length(data$m_i) + 10,
       paras_dim = paras$paras_block_dim
+      
     ))
      cat(j,
         L1- L0,
@@ -270,7 +271,11 @@ if(!is.null(nL)){
                                            np_surv = paras$np_surv, survival = (data$nE>0), assoc =  paras$assoc, truncation = paras$truncation, 
                                            nE = data$nE, Xsurv1 = as.matrix(data$Xsurv1), Xsurv2 = as.matrix(data$Xsurv2), 
                                            clustertype=cluster_type, ii=length(data$m_i)+10,
-                                           paras_dim=paras$paras_block_dim)
+                                           paras_dim=paras$paras_block_dim,
+      paras_length=paras$paras_length,
+      mapping.to.LP=paras$mapping.to.LP,
+      mapping.to.LP2=paras$mapping.to.LP2,
+      mappingLP2LP1=paras$mappingLP2LP1)
                     ,silent = FALSE)
       
         temp$b <-  get_opt_formative(temp$b, paras$paras_block_dim, mapping=mapping.to.LP, mapping2=mapping.to.LP2,nRE=paras$nRE,varcovRE.format=varcovRE.format)

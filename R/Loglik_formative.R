@@ -8,26 +8,24 @@ Loglik_formative <- function(K , nD, mapping,nL,mapping2, paraOpt,  paraFixe , p
                              nE, Xsurv1 , Xsurv2 ,
                              if_link , zitr, ide,
                              tau , tau_is, 
-                             modA_mat, DeltaT, ii,paras_dim){
+                             modA_mat, DeltaT, ii,paras_dim,paras_length,
+                             map_p){
   
-  
-  
-  
-  alpha_mu <- 
-  alpha_mu <- 
-  alpha_D <- 
-  vec_alpha_ij <- 
-  paraB <- 
-  paraSig <- 
-  ParaTransformY <- 
-  para_surv <- 
-  para_weights <- 
   # here I start transforming parameters
   
   # Weigths for formative structural model
-  mappingLP2LP1 <- pmin(table(mapping.to.LP2, mapping.to.LP), 1)
-  W_raw <- 
+  
+  W_raw <- matrix(0, nrow=nD, ncol=nL)
+  for(d in 1:nD){
+    idx <- which(mappingLP2LP1[,d] == 1)
+    k <- length(idx)
+    if(k > 0){
+      w <- para_weights(idx)
+      W_raw[d, idx] <- w
+    }
+  }
   mappingLP2LP1_weights <- t(mappingLP2LP1) * W_raw
+  
   
   
   if(varcovRE.format=="cholesky"){
@@ -82,11 +80,7 @@ Loglik_formative <- function(K , nD, mapping,nL,mapping2, paraOpt,  paraFixe , p
     if(nrow(alpha_D_matrix)>(nD*3)){
       stop("Random effects with a non-linear effect of time are currently not implemented")
     }
-    #alpha_D
-    # alpha_D_matrix_trans <- recover_omega_cov(
-    #   Blambda   = reorder_bytype(alpha_D_matrix,nD=nD,has_slope=has_slope) ,
-    #   mappingL1L2   = mappingLP2LP1_weights
-    # )
+  
     
     
     alpha_D_matrix_trans <- recover_omega_cov(
