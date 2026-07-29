@@ -81,14 +81,34 @@ Parametre_formative <- function(K,
   # K = number of outcomes
   #======================================================================================
   
+  
+  mappingLP2LP1 <- pmin(table(mapping.to.LP2, mapping.to.LP), 1)
+  W_raw <- matrix(0, nrow=nD, ncol=nL)
+  for(d in 1:nD){
+    idx <- which(mappingLP2LP1[,d] == 1)
+    k <- length(idx)
+    if(k > 0){
+      w <- runif(k, 0.1, 1)   # enforce imbalance
+      w <- w / sum(w)
+      W_raw[d, idx] <- w
+    }
+  }
+  
+  print("initial weights")
+  print(W_raw)
+  
+  para_weights <- apply(W_raw,2,sum)
+
+  indexparaFixeUser$para_weights <- NULL
+ 
   if(varcovRE.format=="cholesky"){
     nb_paraD = nb_RE*(nb_RE+1)/2
   }
   
   if(varcovRE.format=="block"){
-    nq <- (nb_RE-nD)/nD
+    nq <- (nb_RE-nL)/nL
     # random int + cholesky + rho int +rho int slopes
-    nb_paraD=nD+(nq*(nq+1)/2)*nD+(nD^2-nD)/2+nD*nq
+    nb_paraD=nL+(nq*(nq+1)/2)*nL+(nL^2-nL)/2+nL*nq
     
   }
   indexparaFixeForIden <- NULL
@@ -138,28 +158,29 @@ Parametre_formative <- function(K,
     
     #random effects
     alpha_D <- paras.ini$alpha_D
+   
+
     if(varcovRE.format=="cholesky"){
       alpha_D_matrix <- DparChol(nb_RE,alpha_D)
-     
     }
     
     if(varcovRE.format=="block"){
-      alpha_D_matrix <-DparBlock(nD,(nb_RE-nD)/nD,alpha_D)
+      alpha_D_matrix <-DparBlock(nL,(nb_RE-nL)/nL,alpha_D)
       print(alpha_D_matrix)
     }
     
-    
-    RE_z0 <- as.integer(sub("\\(.*\\)", "", names_z0))
-    RE_z <- as.integer(sub("\\(.*\\)", "", names_z))
-    colnames(alpha_D_matrix) <- c(names_z0,names_z)
-    rownames(alpha_D_matrix) <- c(names_z0,names_z)
+  
+    # RE_z0 <- as.integer(sub("\\(.*\\)", "", names_z0))
+    # RE_z <- as.integer(sub("\\(.*\\)", "", names_z))
+    # colnames(alpha_D_matrix) <- c(names_z0,names_z)
+    # rownames(alpha_D_matrix) <- c(names_z0,names_z)
     
     #counting
     to_nrow <- nb_RE
     i_alpha_D <- 0
     index_paraFixeDconstraint <- NULL
     
-    for(n in 1:nD){
+    for(n in 1:nL){
       #if(link[n] != "thresholds")
       #alpha_D[i_alpha_D+1] <- 1
       i_alpha_D <- i_alpha_D + to_nrow
@@ -167,7 +188,7 @@ Parametre_formative <- function(K,
       to_nrow <- to_nrow -1
     }
     p <- p+nb_paraD
-    paraFixeDconstraint <- rep(1,nD)
+    paraFixeDconstraint <- rep(1,nL)
    
     # para of transition matrix vec_alpha_ij
     vec_alpha_ij <- paras.ini$vec_alpha_ij
@@ -235,22 +256,18 @@ Parametre_formative <- function(K,
     
   }
   
-  mappingLP2LP1 <- pmin(table(mapping.to.LP2, mapping.to.LP), 1)
-  W_raw <- matrix(0, nrow=nD, ncol=nL)
-  for(d in 1:nD){
-    idx <- which(mappingLP2LP1[,d] == 1)
-    k <- length(idx)
-    if(k > 0){
-      w <- runif(k, 0.1, 1)   # enforce imbalance
-      w <- w / sum(w)
-      W_raw[d, idx] <- w
-    }
-  }
   
-  print("initial weights")
-  print(W_raw)
   
-  para_weights <- apply(W_raw,2,sum)
+  names(alpha_mu0) <- paste0("alpha_mu0",1:length(alpha_mu0))
+  names(alpha_mu)<- paste0("alpha_mu0",1:length(alpha_mu))
+  names(alpha_D)<- paste0("alpha_mu0",1:length(alpha_D))
+  names(vec_alpha_ij)<- paste0("alpha_mu0",1:length(vec_alpha_ij))
+  if(!is.null(paraB))names(paraB)<- paste0("alpha_mu0",1:length(paraB))
+  names(paraSig)<- paste0("alpha_mu0",1:length(paraSig))
+  names(ParaTransformY)<- paste0("alpha_mu0",1:length(ParaTransformY))
+  if(!is.null(para_surv))names(para_surv)<- paste0("alpha_mu0",1:length(para_surv))
+  names(para_weights)<- paste0("alpha_mu0",1:length(para_weights))
+  
   #final vector of initial parameters
   paras <- c(
     alpha_mu0,
@@ -283,7 +300,15 @@ Parametre_formative <- function(K,
   ), length))
   
   
-  
+  names(paras_length) <- c("alpha_mu0",
+                           "alpha_mu",
+                           "alpha_D",
+                           "vec_alpha_ij",
+                           "paraB",
+                           "paraSig",
+                           "ParaTransformY",
+                           "para_surv",
+                           "para_weights")
   
   indexparaFixeUser2 <- c(
     indexparaFixeUser$alpha_mu0,
@@ -293,7 +318,8 @@ Parametre_formative <- function(K,
     indexparaFixeUser$paraB + sum(paras_length[1:4]),
     indexparaFixeUser$paraSig + sum(paras_length[1:5]),
     indexparaFixeUser$ParaTransformY + sum(paras_length[1:6]),
-    indexparaFixeUser$para_surv + sum(paras_length[1:7])
+    indexparaFixeUser$para_surv + sum(paras_length[1:7]),
+    indexparaFixeUser$para_weights +sum(paras_length[1:8])
   )
   
   
@@ -334,10 +360,15 @@ Parametre_formative <- function(K,
     posfix[indexFixe] <- 1 # fixation des paras d'indexes dans indexparaFixe
     paras[indexFixe] <- paraFixe
     paraOpt <- paras[-indexFixe]
+    # map_pOpt <- unlist(map_p)[-indexFixe]
   }
+  
+  print("opt parameters")
+  print(paraOpt)
+ 
+  
   return(
     list(
-      para = paras,
       paraOpt = paraOpt,
       paraFixe = paraFixe,
       posfix = posfix,
@@ -349,7 +380,7 @@ Parametre_formative <- function(K,
       truncation = truncation,
       nb_paraD= nb_paraD,
       paras_length=paras_length,
-      map_p=map_p
+      map_p= map_p
     )
   )
 }

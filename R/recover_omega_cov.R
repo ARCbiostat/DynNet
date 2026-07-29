@@ -12,36 +12,15 @@ recover_omega_cov <- function(alpha_D,
                               mappingL1L2) {
   
   
-  # nB <- nrow(Blambda)
-  # if (nB != ncol(Blambda)) stop("Blambda must be square.")
-  # 
-  # rn <- rownames(Blambda); cn <- colnames(Blambda)
-  # if (!is.null(rn) && !is.null(cn) && !identical(rn, cn))
-  #   warning("Row/col names of Blambda differ; proceeding but consistent names are recommended.")
-  # 
+  
   nD <- nrow(mappingL1L2)
   nL <- ncol(mappingL1L2)
   W  <- matrix(mappingL1L2,ncol=nL,nrow=nD)
   
-  
-  alpha_D[1:nD] <- 
-    apply(W, 1, function(w){
-      sum(w^2) +
-        2 * 0 * sum(outer(w, w)[upper.tri(outer(w, w))])
-    })
   Blamdabyp <- DparBlock(nD,(nb_RE-nD)/nD,alpha_D)
   has_slope <- ifelse(nrow(Blamdabyp)>nD*2,TRUE,FALSE)
   Blambda   = reorder_bytype(Blamdabyp ,nD=nD,has_slope=has_slope)
   
-  # # --- name-based parsing (preferred)
-  # idx_int0 <- 1:nD
-  # idx_int <- setdiff( which(
-  #   grepl("\\(Intercept\\)|Intercept(?!0)", rn, ignore.case = TRUE, perl = TRUE)
-  # ),idx_int0)
-  # idx_slope <- setdiff(seq_len(nB), union(idx_int0, idx_int))
-  # 
-  # has_slope <- length(idx_slope) > 0
-
   omega_usage <- colSums(abs(W) > 0)
   overlapped <- which(omega_usage > 1)
 
@@ -52,29 +31,38 @@ recover_omega_cov <- function(alpha_D,
     if(has_slope)A <- as.matrix(Matrix::bdiag(W, W, W)) else A <- as.matrix(Matrix::bdiag(W, W))
     Ap <- MASS::ginv(as.matrix(A))
     
-    BOmega <- Ap %*% Blambda %*% t(Ap)
-    BOmega <- (BOmega + t(BOmega))/2
-    eps <- 1e-3
-    BOmega <- BOmega + eps * diag(nrow(BOmega))
-    sd0 <- sqrt(diag(BOmega))
-    R0  <- cov2cor(BOmega)
-    alpha <- 0.7   # o 0.5
+    BOmega_raw <- Ap %*% Blambda %*% t(Ap)
     
-    R1 <- R0
-    R1[row(R1) != col(R1)] <- alpha * R1[row(R1) != col(R1)]
-    BOmega <- diag(sd0) %*% R1 %*% diag(sd0)
+    BOmega <- BOmega_raw
     
-    diag(BOmega)[1:nL] <- 1
-    print("eerore ricostruzione")
+    idx <- 1:nL
+    
+    S <- diag(1 / sqrt(diag(BOmega_raw[idx,idx])))
+    
+    BOmega[idx,idx] <- S %*% BOmega_raw[idx,idx] %*% S
+    
+    # BOmega <- (BOmega + t(BOmega))/2
+    # eps <- 1e-3
+    # BOmega <- BOmega + eps * diag(nrow(BOmega))
+    # sd0 <- sqrt(diag(BOmega))
+    # R0  <- cov2cor(BOmega)
+    # alpha <- 0.7   # o 0.5
+    # 
+    # R1 <- R0
+    # R1[row(R1) != col(R1)] <- alpha * R1[row(R1) != col(R1)]
+    # BOmega <- diag(sd0) %*% R1 %*% diag(sd0)
+    
+    #diag(BOmega)[1:nL] <- 1
+    print("errore ricostruzione")
     print(max(abs(
       as.numeric(A %*% BOmega %*% t(A)) -
         as.numeric(Blambda)
-    ))>0.01)
+    ))>0.0)
     if (
       max(abs(
         as.numeric(A %*% BOmega %*% t(A)) -
         as.numeric(Blambda)
-      ))>0.01
+      ))>0.0
     ){
       Delta <- Blambda - A %*% BOmega %*% t(A)
       print(

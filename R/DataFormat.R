@@ -901,6 +901,17 @@ DataFormat_formative <- function(data, subject, fixed_X0.models , randoms_X0.mod
   minY <- tr_Y$minY
   maxY <- tr_Y$maxY
   
+  # fix model.matrix for formative
+  mappingLP2LP1 <- pmin(table(mapping, mapping2), 1)
+  mappingLP2LP1_vec <- apply(mappingLP2LP1,2,function(x)which(x!=0))
+  #x <-model_matrix_nL(x,repeats_lp = mappingLP2LP1_vec)
+  z <-model_matrix_nL(z,repeats_lp = mappingLP2LP1_vec,mod=2)
+  q <- if(all(q)==0)rep(0,nL)else rep(q,times= as.numeric(table(mappingLP2LP1_vec)))
+  #x0 <-model_matrix_nL(x0,repeats_lp = mappingLP2LP1_vec)
+  z0 <-model_matrix_nL(z0,repeats_lp = mappingLP2LP1_vec,mod=2)
+  q0 <- if(all(q0)==0)rep(0,nL)else rep(q0,times= as.numeric(table(mappingLP2LP1_vec)))
+  
+  
   nb_RE <- sum(q0,q)
   
   if(varcovRE.format=="cholesky"){
@@ -908,9 +919,9 @@ DataFormat_formative <- function(data, subject, fixed_X0.models , randoms_X0.mod
   }
   
   if(varcovRE.format=="block"){
-    nq <- (nb_RE-nD)/nD
+    nq <- (nb_RE-nL)/nL
     # random int + cholesky + rho int +rho int slopes
-    nb_paraD=nD+(nq*(nq+1)/2)*nD+(nD^2-nD)/2+nD*nq
+    nb_paraD=nL+(nq*(nq+1)/2)*nL+(nL^2-nL)/2+nL*nq
     
   }
   

@@ -395,25 +395,49 @@ enter_param<-function(structural.model,
     
     
     if(varcovRE.format=="block"){
-      if(is.null(varcovRE$var.int)) varcovRE$var.int <- rep(1,nD)
-      if(length(varcovRE$var.int)!=nD) stop(paste0("The length of varcovRE$var.int should be ",nD,"."))
-      if(any(varcovRE$var.int!=1))warning("The variance of the random baseline intercept is usually set to 1 for identifiability.")
-      
-      if(length(varcovRE$varcovRE.time)!=nD) stop(paste("varcovRE$varcovRE.time should contain", nD,"square matrices."))
-      lapply(varcovRE$varcovRE.time, function(x) if(nrow(x)!=ncol(x)) stop("all varcovRE$varcovRE.time elements should be square matrices."))
-      lapply(varcovRE$varcovRE.time, function(x) if(!isSymmetric.matrix(x)) stop(paste("all varcovRE$varcovRE.time elements be symmetric.")))
-      varcovRE.time.chol <- lapply(varcovRE$varcovRE.time, function(x) t(chol(x))[lower.tri(t(chol(x)),diag = T)])
-      
-      if(is.null(varcovRE$rho.int))varcovRE$rho.int <- rep(0,(nD^2-nD)/2)
-      if(length(varcovRE$rho.int)!=(nD^2-nD)/2)stop(paste0("The length of varcovRE$rho.int should be ",(nD^2-nD)/2,"."))
-      if(any(varcovRE$rho.int<0)|any(varcovRE$rho.int>1) )stop("All elements of varcovRE$rho.int should be between 0 and 1.")
-      
-      
-      if(is.null(varcovRE$rho.int.time))varcovRE$rho.int.time <- lapply(1:nD,function(x)rep(0,(nb_RE-nD)/nD))
-      if(length(varcovRE$rho.int.time)!=nD)stop(paste0("The length of varcovRE$rho.int.time should be ",nD,"."))
-      
-      
-      alpha_D <- c(varcovRE$var.int,unlist(varcovRE.time.chol),inv_rho(varcovRE$rho.int),unlist(lapply(varcovRE$rho.int.time,function(x)inv_rho(x))))
+      if(is.null(nL)){
+        if(is.null(varcovRE$var.int)) varcovRE$var.int <- rep(1,nD)
+        if(length(varcovRE$var.int)!=nD) stop(paste0("The length of varcovRE$var.int should be ",nD,"."))
+        if(any(varcovRE$var.int!=1))warning("The variance of the random baseline intercept is usually set to 1 for identifiability.")
+        
+        if(length(varcovRE$varcovRE.time)!=nD) stop(paste("varcovRE$varcovRE.time should contain", nD,"square matrices."))
+        lapply(varcovRE$varcovRE.time, function(x) if(nrow(x)!=ncol(x)) stop("all varcovRE$varcovRE.time elements should be square matrices."))
+        lapply(varcovRE$varcovRE.time, function(x) if(!isSymmetric.matrix(x)) stop(paste("all varcovRE$varcovRE.time elements be symmetric.")))
+        varcovRE.time.chol <- lapply(varcovRE$varcovRE.time, function(x) t(chol(x))[lower.tri(t(chol(x)),diag = T)])
+        
+        if(is.null(varcovRE$rho.int))varcovRE$rho.int <- rep(0,(nD^2-nD)/2)
+        if(length(varcovRE$rho.int)!=(nD^2-nD)/2)stop(paste0("The length of varcovRE$rho.int should be ",(nD^2-nD)/2,"."))
+        if(any(varcovRE$rho.int<0)|any(varcovRE$rho.int>1) )stop("All elements of varcovRE$rho.int should be between 0 and 1.")
+        
+        
+        if(is.null(varcovRE$rho.int.time))varcovRE$rho.int.time <- lapply(1:nD,function(x)rep(0,(nb_RE-nD)/nD))
+        if(length(varcovRE$rho.int.time)!=nD)stop(paste0("The length of varcovRE$rho.int.time should be ",nD,"."))
+        
+        
+        alpha_D <- c(varcovRE$var.int,unlist(varcovRE.time.chol),inv_rho(varcovRE$rho.int),unlist(lapply(varcovRE$rho.int.time,function(x)inv_rho(x))))
+        
+      }else{
+        if(is.null(varcovRE$var.int)) varcovRE$var.int <- rep(1,nL)
+        if(length(varcovRE$var.int)!=nL) stop(paste0("The length of varcovRE$var.int should be ",nL,"."))
+        if(any(varcovRE$var.int!=1))warning("The variance of the random baseline intercept is usually set to 1 for identifiability.")
+        
+        if(length(varcovRE$varcovRE.time)!=nL) stop(paste("varcovRE$varcovRE.time should contain", nL,"square matrices."))
+        lapply(varcovRE$varcovRE.time, function(x) if(nrow(x)!=ncol(x)) stop("all varcovRE$varcovRE.time elements should be square matrices."))
+        lapply(varcovRE$varcovRE.time, function(x) if(!isSymmetric.matrix(x)) stop(paste("all varcovRE$varcovRE.time elements be symmetric.")))
+        varcovRE.time.chol <- lapply(varcovRE$varcovRE.time, function(x) t(chol(x))[lower.tri(t(chol(x)),diag = T)])
+        
+        if(is.null(varcovRE$rho.int))varcovRE$rho.int <- rep(0,(nL^2-nL)/2)
+        if(length(varcovRE$rho.int)!=(nL^2-nL)/2)stop(paste0("The length of varcovRE$rho.int should be ",(nL^2-nL)/2,"."))
+        if(any(varcovRE$rho.int<0)|any(varcovRE$rho.int>1) )stop("All elements of varcovRE$rho.int should be between 0 and 1.")
+        
+        
+        if(is.null(varcovRE$rho.int.time))varcovRE$rho.int.time <- lapply(1:nL,function(x)rep(0,(nb_RE-nL)/nL))
+        if(length(varcovRE$rho.int.time)!=nL)stop(paste0("The length of varcovRE$rho.int.time should be ",nL,"."))
+        
+        
+        alpha_D <- c(varcovRE$var.int,unlist(varcovRE.time.chol),inv_rho(varcovRE$rho.int),unlist(lapply(varcovRE$rho.int.time,function(x)inv_rho(x))))
+        
+      }
       
     
     }
@@ -1224,29 +1248,53 @@ enter_param<-function(structural.model,
   
   
   if(varcovRE.format=="block"){
-    if(is.null(varcovRE$var.int)) varcovRE$var.int <- rep(1,nD)
-    if(length(varcovRE$var.int)!=nD) stop(paste0("The length of varcovRE$var.int should be ",nD,"."))
-    if(any(varcovRE$var.int!=1))warning("The variance of the random baseline intercept is usually set to 1 for identifiability.")
-   
-     if(length(varcovRE$varcovRE.time)!=nD) stop(paste("varcovRE$varcovRE.time should contain", nD,"square matrices."))
-    lapply(varcovRE$varcovRE.time, function(x) if(nrow(x)!=ncol(x)) stop("all varcovRE$varcovRE.time elements should be square matrices."))
-    lapply(varcovRE$varcovRE.time, function(x) if(nrow(x)!=(nb_RE-nD)/nD) stop(paste("all varcovRE$varcovRE.time elements should have",(nb_RE-nD)/nD,"rows/columns.")))
-    lapply(varcovRE$varcovRE.time, function(x) if(!isSymmetric.matrix(x)) stop(paste("all varcovRE$varcovRE.time elements be symmetric.")))
-    varcovRE.time.chol <- lapply(varcovRE$varcovRE.time, function(x) t(chol(x))[lower.tri(t(chol(x)),diag = T)])
-    
-    if(is.null(varcovRE$rho.int))varcovRE$rho.int <- rep(0,(nD^2-nD)/2)
-    if(length(varcovRE$rho.int)!=(nD^2-nD)/2)stop(paste0("The length of varcovRE$rho.int should be ",(nD^2-nD)/2,"."))
-    if(any(varcovRE$rho.int<0)|any(varcovRE$rho.int>1) )stop("All elements of varcovRE$rho.int should be between 0 and 1.")
-    
-   
-    if(is.null(varcovRE$rho.int.time))varcovRE$rho.int.time <- lapply(1:nD,function(x)rep(0,(nb_RE-nD)/nD))
-    if(length(varcovRE$rho.int.time)!=nD)stop(paste0("The length of varcovRE$rho.int.time should be ",nD,"."))
-    if(any(unlist(lapply(varcovRE$rho.int.time,function(x)length(x)!=(nb_RE-nD)/nD))))stop(paste("All elements of varcovRE$rho.int.time should be of length",(nb_RE-nD)/nD))
-    
-    alpha_D <- c(varcovRE$var.int,unlist(varcovRE.time.chol),inv_rho(varcovRE$rho.int),unlist(lapply(varcovRE$rho.int.time,function(x)inv_rho(x))))
+    if(is.null(nL)){
+      if(is.null(varcovRE$var.int)) varcovRE$var.int <- rep(1,nD)
+      if(length(varcovRE$var.int)!=nD) stop(paste0("The length of varcovRE$var.int should be ",nD,"."))
+      if(any(varcovRE$var.int!=1))warning("The variance of the random baseline intercept is usually set to 1 for identifiability.")
+      
+      if(length(varcovRE$varcovRE.time)!=nD) stop(paste("varcovRE$varcovRE.time should contain", nD,"square matrices."))
+      lapply(varcovRE$varcovRE.time, function(x) if(nrow(x)!=ncol(x)) stop("all varcovRE$varcovRE.time elements should be square matrices."))
+      lapply(varcovRE$varcovRE.time, function(x) if(!isSymmetric.matrix(x)) stop(paste("all varcovRE$varcovRE.time elements be symmetric.")))
+      varcovRE.time.chol <- lapply(varcovRE$varcovRE.time, function(x) t(chol(x))[lower.tri(t(chol(x)),diag = T)])
+      
+      if(is.null(varcovRE$rho.int))varcovRE$rho.int <- rep(0,(nD^2-nD)/2)
+      if(length(varcovRE$rho.int)!=(nD^2-nD)/2)stop(paste0("The length of varcovRE$rho.int should be ",(nD^2-nD)/2,"."))
+      if(any(varcovRE$rho.int<0)|any(varcovRE$rho.int>1) )stop("All elements of varcovRE$rho.int should be between 0 and 1.")
+      
+      
+      if(is.null(varcovRE$rho.int.time))varcovRE$rho.int.time <- lapply(1:nD,function(x)rep(0,(nb_RE-nD)/nD))
+      if(length(varcovRE$rho.int.time)!=nD)stop(paste0("The length of varcovRE$rho.int.time should be ",nD,"."))
+      
+      
+      alpha_D <- c(varcovRE$var.int,unlist(varcovRE.time.chol),inv_rho(varcovRE$rho.int),unlist(lapply(varcovRE$rho.int.time,function(x)inv_rho(x))))
+      if(is.null(fix.varcovRE))fix.varcovRE <- c(rep(1,nD),rep(0,length(alpha_D)-nD))
+      else fix.varcovRE <- c(fix.varcovRE$var.int,unlist(lapply(fix.varcovRE$varcovRE.time,function(x)x[lower.tri(x,diag = T)])),fix.varcovRE$rho.int,unlist(varcovRE$rho.int.time))
+    }else{
+      if(is.null(varcovRE$var.int)) varcovRE$var.int <- rep(1,nL)
+      if(length(varcovRE$var.int)!=nL) stop(paste0("The length of varcovRE$var.int should be ",nL,"."))
+      if(any(varcovRE$var.int!=1))warning("The variance of the random baseline intercept is usually set to 1 for identifiability.")
+      
+      if(length(varcovRE$varcovRE.time)!=nL) stop(paste("varcovRE$varcovRE.time should contain", nL,"square matrices."))
+      lapply(varcovRE$varcovRE.time, function(x) if(nrow(x)!=ncol(x)) stop("all varcovRE$varcovRE.time elements should be square matrices."))
+      lapply(varcovRE$varcovRE.time, function(x) if(!isSymmetric.matrix(x)) stop(paste("all varcovRE$varcovRE.time elements be symmetric.")))
+      varcovRE.time.chol <- lapply(varcovRE$varcovRE.time, function(x) t(chol(x))[lower.tri(t(chol(x)),diag = T)])
+      
+      if(is.null(varcovRE$rho.int))varcovRE$rho.int <- rep(0,(nL^2-nL)/2)
+      if(length(varcovRE$rho.int)!=(nL^2-nL)/2)stop(paste0("The length of varcovRE$rho.int should be ",(nL^2-nL)/2,"."))
+      if(any(varcovRE$rho.int<0)|any(varcovRE$rho.int>1) )stop("All elements of varcovRE$rho.int should be between 0 and 1.")
+      
+      
+      if(is.null(varcovRE$rho.int.time))varcovRE$rho.int.time <- lapply(1:nL,function(x)rep(0,(nb_RE-nL)/nL))
+      if(length(varcovRE$rho.int.time)!=nL)stop(paste0("The length of varcovRE$rho.int.time should be ",nL,"."))
+      
+      
+      alpha_D <- c(varcovRE$var.int,unlist(varcovRE.time.chol),inv_rho(varcovRE$rho.int),unlist(lapply(varcovRE$rho.int.time,function(x)inv_rho(x))))
+      if(is.null(fix.varcovRE))fix.varcovRE <- c(rep(1,nL),rep(0,length(alpha_D)-nL))
+      else fix.varcovRE <- c(fix.varcovRE$var.int,unlist(lapply(fix.varcovRE$varcovRE.time,function(x)x[lower.tri(x,diag = T)])),fix.varcovRE$rho.int,unlist(varcovRE$rho.int.time))
+    }
     print(length(alpha_D))
-    if(is.null(fix.varcovRE))fix.varcovRE <- c(rep(1,nD),rep(0,length(alpha_D)-nD))
-    else fix.varcovRE <- c(fix.varcovRE$var.int,unlist(lapply(fix.varcovRE$varcovRE.time,function(x)x[lower.tri(x,diag = T)])),fix.varcovRE$rho.int,unlist(varcovRE$rho.int.time))
+    
   }
 
   if(length(transitionmatrix)!=length((p+1):(p + L*nD*nD))){
