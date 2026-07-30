@@ -43,8 +43,6 @@ Parametre_formative <- function(K,
                        nL,
                        mapping.to.LP,
                        mapping.to.LP2,
-                       vec_ncol_x0n,
-                       n_col_x,
                        nb_RE,
                        stochErr = FALSE,
                        indexparaFixeUser = NULL,
@@ -69,11 +67,12 @@ Parametre_formative <- function(K,
                        nYsurv = 0,
                        names_x,
                        names_x0,
-                       names_z,
-                       names_z0,
                        names_y,
                        varcovRE.format="cholesky") {
   cl <- match.call()
+  
+  vec_ncol_x0n <- length(names_x0)
+  n_col_x <- length(names_x)
   
   #   require(MASS)
   #initialisation des parametres
@@ -128,6 +127,7 @@ Parametre_formative <- function(K,
   # if user specified initial parameters
 
     map_p <-list() #attribution of parameters to latent process
+    map_p$weights <- apply(W_raw,2,function(x)which(x!=0))
     
     p <- 0 # position in the initialize parameters
     cpt1 <-0 # counter for parameterd
@@ -259,14 +259,14 @@ Parametre_formative <- function(K,
   
   
   names(alpha_mu0) <- paste0("alpha_mu0",1:length(alpha_mu0))
-  names(alpha_mu)<- paste0("alpha_mu0",1:length(alpha_mu))
-  names(alpha_D)<- paste0("alpha_mu0",1:length(alpha_D))
-  names(vec_alpha_ij)<- paste0("alpha_mu0",1:length(vec_alpha_ij))
-  if(!is.null(paraB))names(paraB)<- paste0("alpha_mu0",1:length(paraB))
-  names(paraSig)<- paste0("alpha_mu0",1:length(paraSig))
-  names(ParaTransformY)<- paste0("alpha_mu0",1:length(ParaTransformY))
-  if(!is.null(para_surv))names(para_surv)<- paste0("alpha_mu0",1:length(para_surv))
-  names(para_weights)<- paste0("alpha_mu0",1:length(para_weights))
+  names(alpha_mu)<- paste0("alpha_mu",1:length(alpha_mu))
+  names(alpha_D)<- paste0("alpha_D",1:length(alpha_D))
+  names(vec_alpha_ij)<- paste0("vec_alpha_ij",1:length(vec_alpha_ij))
+  if(!is.null(paraB))names(paraB)<- paste0("paraB",1:length(paraB))
+  names(paraSig)<- paste0("paraSig",1:length(paraSig))
+  names(ParaTransformY)<- paste0("ParaTransformY",1:length(ParaTransformY))
+  if(!is.null(para_surv))names(para_surv)<- paste0("para_surv",1:length(para_surv))
+  names(para_weights)<- paste0("para_weights",1:length(para_weights))
   
   #final vector of initial parameters
   paras <- c(

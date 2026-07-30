@@ -720,7 +720,7 @@ DataFormat_formative <- function(data, subject, fixed_X0.models , randoms_X0.mod
   data_xzMatA_cov <- data_xzMatA_cov[!duplicated(data_xzMatA_cov),]
   x_cov<- NULL
   
-  for(n in 1:nL){
+  for(n in 1:nD){
     indLP_x <- rep(n, dim(data_xzMatA_cov)[1])
     data_x_cov_i <- cbind(data_xzMatA_cov, indLP_x)
     x_cov <- rbind(x_cov, data_x_cov_i)
@@ -755,7 +755,7 @@ DataFormat_formative <- function(data, subject, fixed_X0.models , randoms_X0.mod
   ### remplissage avec les zeros
   tous_col_x0 <-unlist(col_n)
   for(i in 1:nrow(x0)){
-    col_i <- unlist(col_n[[mappingLP2LP1_vec[x0[i,"indLP_x0"]]]])
+    col_i <- unlist(col_n[[x0[i,"indLP_x0"]]])
     col_0<-tous_col_x0[which(!(tous_col_x0 %in% col_i))]
     x0[i,col_0]<-0 #  passer pour optimisation
   }
@@ -789,7 +789,7 @@ DataFormat_formative <- function(data, subject, fixed_X0.models , randoms_X0.mod
   ### filling with zeros
   tous_col_x <-unlist(col_n)
   for(i in 1:nrow(x)){
-    col_i <- unlist(col_n[[mappingLP2LP1_vec[x[i,"indLP_x"]]]])
+    col_i <- unlist(col_n[[x[i,"indLP_x"]]])
     col_0<-tous_col_x[which(!(tous_col_x %in% col_i))]
     x[i,col_0]<-0 # z  passer pour optimisation
   }
@@ -798,6 +798,166 @@ DataFormat_formative <- function(data, subject, fixed_X0.models , randoms_X0.mod
   colnames <- colnames(x)
   x <- as.matrix(x[,-c(1)])
   colnames(x) <- colnames[-c(1)]
+  
+  # ##only for x0 #####
+  # x0 <- NULL
+  # nb_x0_n <- NULL
+  # col_n<-list()
+  # x0_cov <- x_cov[which(x_cov[,Time]==0),]
+  # #
+  # ##
+  # indLP_x0 <- x0_cov$indLP_x
+  # for(n in 1:nD){
+  #   r<-as.formula(paste(subject, fixed_X0.models[n], sep="~-1+"))
+  #   x0n<-model.matrix(r,data=x0_cov)
+  #   nb_x0_n <- c(nb_x0_n,ncol(x0n))
+  #   if(length(x0n)==0){
+  #     col <- paste(n,"zero",sep="")
+  #     x0n<-matrix(assign(col,rep(0,dim(x0_cov)[1])))
+  #     nb_x0_n <- c(nb_x0_n,ncol(x0n))
+  #   }
+  #   
+  #   colnames<-colnames(x0n)
+  #   colnames<-paste("LP0",n,colnames,sep=".")
+  #   colnames(x0n) <-colnames
+  #   col_n <-c(col_n,list(colnames))
+  #   x0<-cbind(x0,as.matrix(x0n))
+  # }
+  # x0 <-cbind(indLP_x0,x0)
+  # ### remplissage avec les zeros
+  # tous_col_x0 <-unlist(col_n)
+  # for(i in 1:nrow(x0)){
+  #   col_i <- unlist(col_n[[mappingLP2LP1_vec[x0[i,"indLP_x0"]]]])
+  #   col_0<-tous_col_x0[which(!(tous_col_x0 %in% col_i))]
+  #   x0[i,col_0]<-0 #  passer pour optimisation
+  # }
+  # x0 <- as.matrix(x0)
+  # colnames <- colnames(x0)
+  # x0 <- as.matrix(x0[,-c(1)])
+  # colnames(x0) <- colnames[-c(1)]
+  # #   x0 <- as.matrix(x0)
+  # 
+  # ##only for x #####
+  # x <- NULL
+  # nb_x_n <- NULL
+  # col_n<-list()
+  # indLP_x <- x_cov$indLP_x
+  # for(n in 1:nD){
+  #   r<-as.formula(paste(subject, fixed_DeltaX.models[n], sep="~-1+"))
+  #   xn<-model.matrix(r,data=x_cov)
+  #   nb_x_n <- c(nb_x_n,ncol(xn))
+  #   if(length(xn)==0){
+  #     col <- paste(n,"zero",sep="")
+  #     xn<-matrix(assign(col,rep(0,dim(x_cov)[1])))
+  #     nb_x_n <- c(nb_x_n,ncol(xn))
+  #   }
+  #   colnames<-colnames(xn)
+  #   colnames<-paste("DeltaLP",n,colnames,sep=".")
+  #   colnames(xn) <-colnames
+  #   col_n <-c(col_n,list(colnames))
+  #   x<-cbind(x,as.matrix(xn))
+  # }
+  # x <-cbind(indLP_x,x)
+  # ### filling with zeros
+  # tous_col_x <-unlist(col_n)
+  # for(i in 1:nrow(x)){
+  #   col_i <- unlist(col_n[[mappingLP2LP1_vec[x[i,"indLP_x"]]]])
+  #   col_0<-tous_col_x[which(!(tous_col_x %in% col_i))]
+  #   x[i,col_0]<-0 # z  passer pour optimisation
+  # }
+  # 
+  # x <- as.matrix(x)
+  # colnames <- colnames(x)
+  # x <- as.matrix(x[,-c(1)])
+  # colnames(x) <- colnames[-c(1)]
+  
+  x_cov <- NULL
+  data_x_cov_i <- NULL
+  for(n in 1:nL){
+    indLP_x <- rep(n, dim(data_xzMatA_cov)[1])
+    data_x_cov_i <- cbind(data_xzMatA_cov, indLP_x)
+    x_cov <- rbind(x_cov, data_x_cov_i)
+  }
+  x_cov <- x_cov[order(x_cov[,subject],x_cov[,Time]),]
+  
+  ##only for x0 omega #####
+  
+  mappingLP2LP1 <- pmin(table(mapping, mapping2), 1)
+  mappingLP2LP1_vec <- apply(mappingLP2LP1,2,function(x)which(x!=0))
+  
+  fixed_X0.models_omega <-fixed_X0.models[mappingLP2LP1_vec] 
+  fixed_DeltaX.models_omega <-fixed_DeltaX.models[mappingLP2LP1_vec] 
+  
+  x0_omega <- NULL
+  nb_x0_n_omega <- NULL
+  col_n<-list()
+  x0_cov <- x_cov[which(x_cov[,Time]==0),]
+  #
+  ##
+  indLP_x0 <- x0_cov$indLP_x
+  for(n in 1:nL){
+    r<-as.formula(paste(subject, fixed_X0.models_omega[n], sep="~-1+"))
+    x0n<-model.matrix(r,data=x0_cov)
+    nb_x0_n_omega <- c(nb_x0_n_omega,ncol(x0n))
+    if(length(x0n)==0){
+      col <- paste(n,"zero",sep="")
+      x0n<-matrix(assign(col,rep(0,dim(x0_cov)[1])))
+      nb_x0_n_omega <- c(nb_x0_n_omega,ncol(x0n))
+    }
+    
+    colnames<-colnames(x0n)
+    colnames<-paste("LP0",n,colnames,sep=".")
+    colnames(x0n) <-colnames
+    col_n <-c(col_n,list(colnames))
+    x0_omega<-cbind(x0_omega,as.matrix(x0n))
+  }
+  x0_omega <-cbind(indLP_x0,x0_omega)
+  ### remplissage avec les zeros
+  tous_col_x0 <-unlist(col_n)
+  for(i in 1:nrow(x0_omega)){
+    col_i <- unlist(col_n[[x0_omega[i,"indLP_x0"]]])
+    col_0<-tous_col_x0[which(!(tous_col_x0 %in% col_i))]
+    x0_omega[i,col_0]<-0 #  passer pour optimisation
+  }
+  x0_omega <- as.matrix(x0_omega)
+  colnames <- colnames(x0_omega)
+  x0_omega <- as.matrix(x0_omega[,-c(1)])
+  colnames(x0_omega) <- colnames[-c(1)]
+  #   x0 <- as.matrix(x0)
+  
+  ##only for x omega #####
+  x_omega <- NULL
+  nb_x_n <- NULL
+  col_n<-list()
+  indLP_x <- x_cov$indLP_x
+  for(n in 1:nL){
+    r<-as.formula(paste(subject, fixed_DeltaX.models_omega[n], sep="~-1+"))
+    xn<-model.matrix(r,data=x_cov)
+    nb_x_n <- c(nb_x_n,ncol(xn))
+    if(length(xn)==0){
+      col <- paste(n,"zero",sep="")
+      xn<-matrix(assign(col,rep(0,dim(x_cov)[1])))
+      nb_x_n <- c(nb_x_n,ncol(xn))
+    }
+    colnames<-colnames(xn)
+    colnames<-paste("DeltaLP",n,colnames,sep=".")
+    colnames(xn) <-colnames
+    col_n <-c(col_n,list(colnames))
+    x_omega<-cbind(x_omega,as.matrix(xn))
+  }
+  x_omega <-cbind(indLP_x,x_omega)
+  ### filling with zeros
+  tous_col_x <-unlist(col_n)
+  for(i in 1:nrow(x_omega)){
+    col_i <- unlist(col_n[[x_omega[i,"indLP_x"]]])
+    col_0<-tous_col_x[which(!(tous_col_x %in% col_i))]
+    x_omega[i,col_0]<-0 # z  passer pour optimisation
+  }
+  
+  x_omega <- as.matrix(x_omega)
+  colnames <- colnames(x_omega)
+  x_omega <- as.matrix(x_omega[,-c(1)])
+  colnames(x_omega) <- colnames[-c(1)]
   
   #===================================================================
   #     construction  of matrices z0 et z========================
@@ -818,7 +978,11 @@ DataFormat_formative <- function(data, subject, fixed_X0.models , randoms_X0.mod
   col_n<-list()
   q0 <- NULL
   nb_paraDw <- 0
-  for(n in 1:nD){
+  
+  randoms_X0.models <-randoms_X0.models[mappingLP2LP1_vec] 
+  randoms_DeltaX.models <-randoms_DeltaX.models[mappingLP2LP1_vec] 
+  
+  for(n in 1:nL){
     r<-as.formula(paste(subject,randoms_X0.models[n], sep="~-1+"))
     z0n<-model.matrix(r,data=z0_cov)
     if(length(z0n)==0){
@@ -837,7 +1001,7 @@ DataFormat_formative <- function(data, subject, fixed_X0.models , randoms_X0.mod
   ### filling with zeros
   tous_col_z0 <-unlist(col_n)
   for(i in 1:nrow(z0)){
-    col_i <- unlist(col_n[[mappingLP2LP1_vec[z0[i,"indY_z0"]]]])
+    col_i <- unlist(col_n[[z0[i,"indY_z0"]]])
     col_0<-tous_col_z0[which(!(tous_col_z0 %in% col_i))]
     z0[i,col_0]<-0 # z  passer pour optimisation
   }
@@ -852,7 +1016,7 @@ DataFormat_formative <- function(data, subject, fixed_X0.models , randoms_X0.mod
   q <- NULL
   nb_paraDu <- 0
   
-  for(n in 1:nD){
+  for(n in 1:nL){
     r<-as.formula(paste(subject,randoms_DeltaX.models[n], sep="~-1+"))
     zn<-model.matrix(r,data=z_cov)
     if(length(zn)==0){
@@ -876,7 +1040,7 @@ DataFormat_formative <- function(data, subject, fixed_X0.models , randoms_X0.mod
   ### filling with zeros
   tous_col_z <-unlist(col_n)
   for(i in 1:nrow(z)){
-    col_i <- unlist(col_n[[mappingLP2LP1_vec[z[i,"indY_z"]]]])
+    col_i <- unlist(col_n[[z[i,"indY_z"]]])
     col_0<-tous_col_z[which(!(tous_col_z %in% col_i))]
     z[i,col_0]<-0 #
   }
@@ -901,16 +1065,15 @@ DataFormat_formative <- function(data, subject, fixed_X0.models , randoms_X0.mod
   minY <- tr_Y$minY
   maxY <- tr_Y$maxY
   
-  # fix model.matrix for formative
-  mappingLP2LP1 <- pmin(table(mapping, mapping2), 1)
-  mappingLP2LP1_vec <- apply(mappingLP2LP1,2,function(x)which(x!=0))
-  #x <-model_matrix_nL(x,repeats_lp = mappingLP2LP1_vec)
-  z <-model_matrix_nL(z,repeats_lp = mappingLP2LP1_vec,mod=2)
-  q <- if(all(q)==0)rep(0,nL)else rep(q,times= as.numeric(table(mappingLP2LP1_vec)))
-  #x0 <-model_matrix_nL(x0,repeats_lp = mappingLP2LP1_vec)
-  z0 <-model_matrix_nL(z0,repeats_lp = mappingLP2LP1_vec,mod=2)
-  q0 <- if(all(q0)==0)rep(0,nL)else rep(q0,times= as.numeric(table(mappingLP2LP1_vec)))
+  # # fix model.matrix for formative
   
+  # #x <-model_matrix_nL(x,repeats_lp = mappingLP2LP1_vec)
+  # z <-model_matrix_nL(z,repeats_lp = mappingLP2LP1_vec,mod=2)
+  # q <- if(all(q)==0)rep(0,nL)else rep(q,times= as.numeric(table(mappingLP2LP1_vec)))
+  # #x0 <-model_matrix_nL(x0,repeats_lp = mappingLP2LP1_vec)
+  # z0 <-model_matrix_nL(z0,repeats_lp = mappingLP2LP1_vec,mod=2)
+  # q0 <- if(all(q0)==0)rep(0,nL)else rep(q0,times= as.numeric(table(mappingLP2LP1_vec)))
+  # 
   
   nb_RE <- sum(q0,q)
   
@@ -977,7 +1140,7 @@ DataFormat_formative <- function(data, subject, fixed_X0.models , randoms_X0.mod
   }
   
   return(list(nb_subject=I, nb_obs = length(na.omit(as.vector(Y))), K=K, nD = nD,nL=nL, all.preds = all.preds, id_and_Time=id_and_Time,Tmax = Tmax, m_i = m_i, Y = Y, Mod.MatrixY=Mod.MatrixY,  
-              Mod.MatrixYprim=Mod.MatrixYprim, minY = minY, maxY = maxY, knots = knots, zitr = zitr, ide = ide, df = df, degree = degree, x = x, x0 = x0, 
+              Mod.MatrixYprim=Mod.MatrixYprim, minY = minY, maxY = maxY, knots = knots, zitr = zitr, ide = ide, df = df, degree = degree, x = x, x0 = x0, x_omega=x_omega,x0_omega=x0_omega,
               vec_ncol_x0n = nb_x0_n, z = z, z0=z0, q = q, q0 = q0, nb_paraD = nb_paraD, nb_RE=nb_RE, modA_mat = modA_mat,
               tau = tau, tau_is = tau_is, Event = Event, StatusEvent = StatusEvent, basehaz = basehaz, nE = nE, Xsurv1 = Xsurv1, Xsurv2 = Xsurv2,
               np_surv = np_surv, intYsurv = intYsurv, nYsurv = nYS))

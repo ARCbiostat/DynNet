@@ -1,8 +1,8 @@
 Loglik_formative <- function(K , nD, mapping,nL,mapping2,paraOpt,  paraFixe , posfix , paras_k ,
                              sequence , type_int , ind_seq_i, MCnr , nmes ,
                              m_is , Mod_MatrixY , Mod_MatrixYprim , df,
-                             x , z , q , nb_paraD ,
-                             x0 , z0 , q0 , varcov_format ,
+                             x ,x_omega, z , q , nb_paraD ,
+                             x0 ,x0_omega, z0 , q0 , varcov_format ,
                              data_surv , data_surv_intY , nYsurv , basehaz , knots_surv, 
                              np_surv , survival , assoc , truncation, 
                              nE, Xsurv1 , Xsurv2 ,
@@ -435,11 +435,11 @@ Loglik_formative <- function(K , nD, mapping,nL,mapping2,paraOpt,  paraFixe , po
     }
   }
   
-  # fix model.matrix for formative
-  mappingLP2LP1 <- pmin(table(mapping, mapping2), 1)
-  mappingLP2LP1_vec <- apply(mappingLP2LP1,2,function(x)which(x!=0))
-  x <-model_matrix_nL(x,repeats_lp = mappingLP2LP1_vec)
-  x0 <-model_matrix_nL(x0,repeats_lp = mappingLP2LP1_vec)
+  # # fix model.matrix for formative
+  # mappingLP2LP1 <- pmin(table(mapping, mapping2), 1)
+  # mappingLP2LP1_vec <- apply(mappingLP2LP1,2,function(x)which(x!=0))
+  # x <-model_matrix_nL(x,repeats_lp = mappingLP2LP1_vec)
+  # x0 <-model_matrix_nL(x0,repeats_lp = mappingLP2LP1_vec)
   
   
   # LogLik
@@ -460,11 +460,11 @@ Loglik_formative <- function(K , nD, mapping,nL,mapping2,paraOpt,  paraFixe , po
     Mod_MatrixY = Mod_MatrixY,
     Mod_MatrixYprim = Mod_MatrixYprim,
     df = df,
-    x = as.matrix(x),
+    x = as.matrix(x_omega),
     z = as.matrix(z),
     q = q,
     nb_paraD = nb_paraD,
-    x0 = as.matrix(x0),
+    x0 = as.matrix(x0_omega),
     z0 = as.matrix(z0),
     q0 = q0,
     varcov_format=varcov_format,
