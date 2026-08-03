@@ -549,9 +549,31 @@ simulateDynNet <- function(Ni,
 
 #################
 if (varcovRE.format == "block") {
-  nb_RE <- length(q0) + length(q)
-  matD <- DparBlock(nD, (nb_RE - nD) / nD, parameters$alpha_D)
+  
+  if(formative){
+    W <- matrix(0, nrow=nD, ncol=nL)
+    for(d in 1:nD){
+      idx <- which(mappingLP2LP1[,d] == 1)
+      k <- length(idx)
+      if(k > 0){
+        eta <- parameters$weights[idx]
+        w <- exp(eta)
+        w <- w / sum(w)
+        
+        W[d,idx] <- w
+      }
+    }
+    nb_RE <- length(q0)/nD*nL + length(q)/nD*nL
+    matD_omega <- DparBlock(nL, (nb_RE - nL) / nL, parameters$alpha_D)
+    matD <- W %*% matD_omega %*% t(W)
+  }else{
+    nb_RE <- length(q0) + length(q)
+    matD <- DparBlock(nD, (nb_RE - nD) / nD, parameters$alpha_D)
+  }
+  
 }
+  
+
 if (varcovRE.format == "cholesky"){
   nb_RE <- length(q0) + length(q)
   matD <-DparChol(nb_RE,parameters$alpha_D)

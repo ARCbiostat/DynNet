@@ -30,6 +30,7 @@ Loglik_formative <- function(K , nD, mapping,nL,mapping2,paraOpt,  paraFixe , po
   para_weights_raw <- para[para_starts["para_weights"]:para_ends["para_weights"]]
   
   W_raw <- matrix(0, nrow=nD, ncol=nL)
+  para_weights_fixed <- c()
   for(d in 1:nD){
     idx <- which(mappingLP2LP1[,d] == 1)
     k <- length(idx)
@@ -39,6 +40,10 @@ Loglik_formative <- function(K , nD, mapping,nL,mapping2,paraOpt,  paraFixe , po
       w <- w / sum(w)
       
       W_raw[d,idx] <- w
+      
+    }
+    if(k==1){
+      para_weights_fixed <- idx
     }
   }
   
@@ -313,7 +318,7 @@ Loglik_formative <- function(K , nD, mapping,nL,mapping2,paraOpt,  paraFixe , po
     para_surv
   )
   
-  print(paras_trans)
+  #print(paras_trans)
   
   paras_trans_length <- unlist(lapply(list(
     alpha_mu0_trans,
@@ -334,7 +339,8 @@ Loglik_formative <- function(K , nD, mapping,nL,mapping2,paraOpt,  paraFixe , po
                                indexFixe_paraB,
                                indexFixe_paraSig,
                                indexFixe_ParaTransformY,
-                               indexFixe_para_surv)
+                               indexFixe_para_surv,
+                               indexFixe_para_weights)
   
   
   paraFixeUser_trans <- c(alpha_mu0_trans[indexFixe_alpha_mu0_trans],
@@ -344,7 +350,8 @@ Loglik_formative <- function(K , nD, mapping,nL,mapping2,paraOpt,  paraFixe , po
                           paraB[indexFixe_paraB],
                           paraSig[indexFixe_paraB],
                           ParaTransformY[indexFixe_ParaTransformY],
-                          para_surv[indexFixe_para_surv])
+                          para_surv[indexFixe_para_surv],
+                          para_weights[indexFixe_para_weights])
   
   
   indexparaFixeUser_trans <- c(indexFixe_alpha_mu0_trans,
@@ -354,7 +361,8 @@ Loglik_formative <- function(K , nD, mapping,nL,mapping2,paraOpt,  paraFixe , po
                                indexFixe_paraB+sum(paras_trans_length[1:4]),
                                indexFixe_paraSig+sum(paras_trans_length[1:5]),
                                indexFixe_ParaTransformY+sum(paras_trans_length[1:6]),
-                               indexFixe_para_surv+sum(paras_trans_length[1:7]))
+                               indexFixe_para_surv+sum(paras_trans_length[1:7]),
+                               indexFixe_para_weights+sum(paras_trans_length[1:8]))
   
   
   #initialisation
@@ -390,13 +398,13 @@ Loglik_formative <- function(K , nD, mapping,nL,mapping2,paraOpt,  paraFixe , po
   # print(paras_trans)
   # print(length(paras_trans))
   # 
-  print("paraOpt")
-  print(paraOpt)
-  print(length(paraOpt))
-  
-  print("paraFixe")
-  print(paraFixe)
-  print(length(paraFixe))
+  # print("paraOpt")
+  # print(paraOpt)
+  # print(length(paraOpt))
+  # 
+  # print("paraFixe")
+  # print(paraFixe)
+  # print(length(paraFixe))
   
   
   
